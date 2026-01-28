@@ -31,7 +31,7 @@ const products = {
   },
   video: {
     name: "Animated Video (MP4)",
-    price: 10.00,
+    price: 5.00,
     width: 1080,
     height: 1080,
   },
@@ -361,8 +361,8 @@ function setup() {
     downloadButton.style('transform', 'translateY(0)');
   });
 
-  // Download Video button ($10)
-  let videoButton = createButton("Get 🎬 $10");
+  // Download Video button (5)
+  let videoButton = createButton("Get 🎬 $5");
   videoButton.parent(controlsDiv);
   videoButton.style('padding', '10px 14px');
   videoButton.style('border', '2px solid #7c3aed');
@@ -1799,7 +1799,7 @@ function startVideoPurchase() {
 
   const modalContent = `
     <h2>Download Animated Video</h2>
-    <p class="modal-price" id="video-price">$10.00</p>
+    <p class="modal-price" id="video-price">$5.00</p>
     <p>Get a 5-second animated MP4 video (1080x1080) of your feather text design.</p>
     ${thumbnail ? `<div style="text-align: center; margin: 15px 0;">
       <img src="${thumbnail}" style="max-width: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
@@ -1829,7 +1829,7 @@ function startVideoPurchase() {
         </div>
       </div>
       <button type="submit" id="video-submit" class="submit-button">
-        <span id="video-button-text">Get 🎬 $10.00</span>
+        <span id="video-button-text">Get 🎬 $5.00</span>
         <span id="video-spinner" class="spinner hidden"></span>
       </button>
     </form>
@@ -1876,8 +1876,8 @@ async function checkVideoDiscount() {
   const statusEl = document.getElementById('discount-status');
 
   if (!discountCode) {
-    priceEl.textContent = '$10.00';
-    buttonText.textContent = 'Get 🎬 $10.00';
+    priceEl.textContent = '$5.00';
+    buttonText.textContent = 'Get 🎬 $5.00';
     cardSection.classList.remove('hidden');
     statusEl.textContent = '';
     return;
@@ -1905,8 +1905,8 @@ async function checkVideoDiscount() {
         statusEl.innerHTML = `<span style="color: #059669;">${Math.round(data.discountPercent * 100)}% discount applied!</span>`;
       }
     } else {
-      priceEl.textContent = '$10.00';
-      buttonText.textContent = 'Get 🎬 $10.00';
+      priceEl.textContent = '$5.00';
+      buttonText.textContent = 'Get 🎬 $5.00';
       cardSection.classList.remove('hidden');
       statusEl.innerHTML = '<span style="color: #dc2626;">Invalid code</span>';
     }
