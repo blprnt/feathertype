@@ -112,6 +112,7 @@ nunjucks.configure("public", {
 app.get(`/`, (req, res) => {
   res.render(`index.njk`, {
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    baseUrl: BASE_URL,
   });
 });
 
