@@ -256,17 +256,19 @@ function setup() {
   // Function to update text and fetch new birds
   const updateText = () => {
     displayText = textInput.value().toUpperCase();
-    
+
     // Pick new random background color for canvas only
     let bgArray = random(backgroundColors);
     bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
-    
+
+    // Reset state - don't start animation until birds are loaded
+    letterData = [];
+    isAnimating = false;
+
     // Fetch new birds for the new text
     getBirdsFromSearch(displayText);
-    
-    // Note: setupLetterPositions() will be called in draw() once birds are loaded
-    animationStartTime = millis();
-    isAnimating = true;
+
+    // Note: animation will start in draw() once birds are loaded and letterData is set up
     loop();
   };
   
@@ -323,13 +325,15 @@ function setup() {
     // Pick new random background color for canvas only
     let bgArray = random(backgroundColors);
     bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
-    
+
+    // Reset state - don't start animation until birds are loaded
+    letterData = [];
+    isAnimating = false;
+
     // Fetch new birds to get different random selections
     getBirdsFromSearch(displayText);
-    
-    // Note: setupLetterPositions() will be called in draw() once birds are loaded
-    animationStartTime = millis();
-    isAnimating = true;
+
+    // Note: animation will start in draw() once birds are loaded and letterData is set up
     loop();
   });
   regenerateButton.mouseOver(() => {
@@ -522,7 +526,12 @@ function setupLetterPositionsFromData(data) {
   let baseTextSize = 180;
   let textSizeAdjustment = map(displayText.length, 1, 15, 1, 0.4);
   let dynamicTextSize = baseTextSize * textSizeAdjustment;
-  dynamicTextSize = constrain(dynamicTextSize, 60, 180);
+
+  // For short phrases, limit size so feathers don't go off screen
+  let maxSizeForFeathers = (height / 2 - 350) * 1.5;
+  maxSizeForFeathers = max(maxSizeForFeathers, 80);
+
+  dynamicTextSize = constrain(dynamicTextSize, 60, min(180, maxSizeForFeathers));
 
   textSize(dynamicTextSize);
   textAlign(CENTER, TOP);
@@ -609,7 +618,14 @@ function setupLetterPositions() {
   let baseTextSize = 180;
   let textSizeAdjustment = map(displayText.length, 1, 15, 1, 0.4); // Scale down for longer phrases
   let dynamicTextSize = baseTextSize * textSizeAdjustment;
-  dynamicTextSize = constrain(dynamicTextSize, 60, 180); // Min 60, max 180
+
+  // For short phrases, limit size so feathers don't go off screen
+  // Feathers extend ~500px above the text, text is centered vertically
+  // Max text size where feathers stay on screen: (height/2 - featherHeight) * 2
+  let maxSizeForFeathers = (height / 2 - 350) * 1.5; // Leave room for feathers
+  maxSizeForFeathers = max(maxSizeForFeathers, 80); // But not too small
+
+  dynamicTextSize = constrain(dynamicTextSize, 60, min(180, maxSizeForFeathers));
   
   textSize(dynamicTextSize);
   textAlign(CENTER, TOP);
