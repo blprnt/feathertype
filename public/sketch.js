@@ -398,7 +398,7 @@ function setup() {
   });
 
   // Order Print button ($25+)
-  let printButton = createButton("Order Print");
+  let printButton = createButton("Order Print $25+");
   printButton.parent(controlsDiv);
   printButton.style('padding', '10px 14px');
   printButton.style('border', '2px solid #059669');
@@ -804,14 +804,14 @@ function drawFeatherText() {
       // If animating or in video mode, use calculated progress; otherwise show full
       let finalProgress = (isAnimating || videoMode) ? easedProgress : 1.0;
 
-      // Add individual feather sway as it appears (gentle settling motion)
+      // Add individual feather sway as it appears (very gentle settling motion)
       let featherSway = 0;
       if ((isAnimating || videoMode) && featherProgress > 0 && featherProgress < 1) {
-        // Slow sway at first, then faster oscillation as feather completes
-        let swayIntensity = (1 - featherProgress) * 0.12; // Stronger at start, fades out
+        // Very subtle sway that fades as feather completes
+        let swayIntensity = (1 - featherProgress) * 0.04; // Much more subtle
         // Ease into the oscillation - slower at start
         let easedOscillation = easeOutQuart(featherProgress);
-        featherSway = sin(easedOscillation * PI * 4) * swayIntensity;
+        featherSway = sin(easedOscillation * PI * 2) * swayIntensity; // Fewer oscillations
       }
 
       let totalSway = windAngle + featherSway;
@@ -871,15 +871,14 @@ function drawFeatherText() {
         let nameToDisplay = birdName.substring(1);
 
         // Calculate how many characters to show based on feather progress
-        // Bird name cascades as feather draws, continues through sway
+        // Bird name cascades as feather draws, completes before sway phase
         let nameProgress;
         if (!isAnimating && !videoMode) {
           nameProgress = 1.0;
         } else {
-          // Map feather progress (0.2 to 1.0) to first half, sway to second half
-          let drawPart = map(featherProgress, 0.2, 1.0, 0, 0.6);
-          let swayPart = swayProgress * 0.4;
-          nameProgress = constrain(drawPart + swayPart, 0, 1);
+          // Map feather progress (0.2 to 1.0) to full name - completes during draw phase
+          nameProgress = map(featherProgress, 0.2, 1.0, 0, 1);
+          nameProgress = constrain(nameProgress, 0, 1);
         }
 
         let charsToShow = floor(nameProgress * (nameToDisplay.length + 1));
