@@ -41,7 +41,7 @@ const products = {
   },
   "print-12x12-framed": {
     name: "12x12 Framed Print",
-    basePrice: 65.00,
+    basePrice: 90.00,
   },
   "print-16x16": {
     name: "16x16 Print",
@@ -49,7 +49,7 @@ const products = {
   },
   "print-16x16-framed": {
     name: "16x16 Framed Print",
-    basePrice: 85.00,
+    basePrice: 120.00,
   },
 };
 
@@ -1311,7 +1311,7 @@ function startPrintPurchase() {
             <input type="radio" name="productType" value="print-12x12-framed">
             <span class="option-content">
               <span class="option-name">12x12 Framed</span>
-              <span class="option-price">$65.00</span>
+              <span class="option-price">$90.00</span>
             </span>
           </label>
           <label class="product-option">
@@ -1325,7 +1325,7 @@ function startPrintPurchase() {
             <input type="radio" name="productType" value="print-16x16-framed">
             <span class="option-content">
               <span class="option-name">16x16 Framed</span>
-              <span class="option-price">$85.00</span>
+              <span class="option-price">$120.00</span>
             </span>
           </label>
         </div>
@@ -1668,10 +1668,21 @@ window.showPrintInfo = showPrintInfo;
 function startVideoPurchase() {
   currentPurchase.type = 'video';
 
+  // Get thumbnail from current canvas
+  const canvas = document.querySelector('canvas');
+  const thumbnail = canvas ? canvas.toDataURL('image/jpeg', 0.7) : '';
+
   const modalContent = `
     <h2>Download Animated Video</h2>
     <p class="modal-price" id="video-price">$10.00</p>
     <p>Get a 5-second animated MP4 video (1080x1080) of your feather text design.</p>
+    ${thumbnail ? `<div style="text-align: center; margin: 15px 0;">
+      <img src="${thumbnail}" style="max-width: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+    </div>` : ''}
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+      <a href="https://www.jerthorp.me/post/of-a-feather" target="_blank" style="color: #2563eb;">See sample video →</a><br>
+      Videos are rendered on our server and may take 1-2 minutes to generate.
+    </p>
     <form id="video-form" onsubmit="handleVideoSubmit(event)">
       <div class="form-group">
         <label for="video-email">Email Address</label>

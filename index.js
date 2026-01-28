@@ -69,8 +69,8 @@ const products = {
   },
   "print-12x12-framed": {
     name: "12x12 Framed Print",
-    sku: "GLOBAL-CFPM-12x12",
-    basePrice: 6500, // $65.00 in cents
+    sku: "GLOBAL-CFP-12X12",
+    basePrice: 9000, // $90.00 in cents
     width: 3600,
     height: 3600,
   },
@@ -83,8 +83,8 @@ const products = {
   },
   "print-16x16-framed": {
     name: "16x16 Framed Print",
-    sku: "GLOBAL-CFPM-16x16",
-    basePrice: 8500, // $85.00 in cents
+    sku: "GLOBAL-CFP-16X16",
+    basePrice: 12000, // $120.00 in cents
     width: 4800,
     height: 4800,
   },
