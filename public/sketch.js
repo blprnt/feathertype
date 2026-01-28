@@ -282,66 +282,20 @@ function setup() {
     }
   });
 
-  // GO button
-  let goButton = createButton("GO");
-  goButton.parent(controlsDiv);
-  goButton.style('padding', '10px 16px');
-  goButton.style('border', '2px solid #333');
-  goButton.style('border-radius', '8px');
-  goButton.style('font-size', '14px');
-  goButton.style('background-color', '#333');
-  goButton.style('color', '#fff');
-  goButton.style('cursor', 'pointer');
-  goButton.style('font-weight', '600');
-  goButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
-  goButton.style('transition', 'all 0.2s');
-  goButton.mousePressed(updateText);
-  goButton.mouseOver(() => {
-    goButton.style('background-color', '#555');
-    goButton.style('transform', 'translateY(-1px)');
-    goButton.style('box-shadow', '0 4px 6px rgba(0,0,0,0.2)');
-  });
-  goButton.mouseOut(() => {
-    goButton.style('background-color', '#333');
-    goButton.style('transform', 'translateY(0)');
-    goButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
-  });
-
-  let regenerateButton = createButton("↻");
+  // Regenerate button
+  let regenerateButton = createButton("regenerate");
   regenerateButton.parent(controlsDiv);
-  regenerateButton.style('padding', '8px');
+  regenerateButton.style('padding', '10px 16px');
   regenerateButton.style('border', '2px solid #333');
   regenerateButton.style('border-radius', '8px');
-  regenerateButton.style('font-size', '20px');
+  regenerateButton.style('font-size', '14px');
   regenerateButton.style('background-color', '#333');
   regenerateButton.style('color', '#fff');
   regenerateButton.style('cursor', 'pointer');
   regenerateButton.style('font-weight', '600');
   regenerateButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
   regenerateButton.style('transition', 'all 0.2s');
-  regenerateButton.style('width', '42px');
-  regenerateButton.style('height', '42px');
-  regenerateButton.style('display', 'flex');
-  regenerateButton.style('align-items', 'center');
-  regenerateButton.style('justify-content', 'center');
-  regenerateButton.mousePressed(() => {
-    // Pick new random background color for canvas only
-    let bgArray = random(backgroundColors);
-    bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
-
-    // Reset all state - don't start animation until new birds are loaded
-    letterData = [];
-    isAnimating = false;
-    birds = undefined;
-    colorCount = -1; // Use -1 to indicate loading state
-    toLoad = 0;
-
-    // Fetch new birds to get different random selections
-    getBirdsFromSearch(displayText);
-
-    // Note: animation will start in draw() once birds are loaded and letterData is set up
-    loop();
-  });
+  regenerateButton.mousePressed(updateText);
   regenerateButton.mouseOver(() => {
     regenerateButton.style('background-color', '#555');
     regenerateButton.style('transform', 'translateY(-1px)');
@@ -555,8 +509,8 @@ function setupLetterPositionsFromData(data) {
   let letterSpacing = dynamicTextSize * 0.22;
   totalWidth += letterSpacing * (displayText.length - 1);
 
-  // Scale everything to fit canvas with margins
-  let maxWidth = width * 0.9;
+  // Scale everything to fit canvas with margins (leave room for framing)
+  let maxWidth = width * 0.75;
   let scale = 1;
   if (totalWidth > maxWidth) {
     scale = maxWidth / totalWidth;
@@ -649,8 +603,8 @@ function setupLetterPositions() {
   let letterSpacing = dynamicTextSize * 0.22; // Proportional to text size
   totalWidth += letterSpacing * (displayText.length - 1);
   
-  // Scale everything to fit canvas with margins
-  let maxWidth = width * 0.9; // 90% of canvas width
+  // Scale everything to fit canvas with margins (leave room for framing)
+  let maxWidth = width * 0.75; // 75% of canvas width for frame-friendly spacing
   let scale = 1;
   if (totalWidth > maxWidth) {
     scale = maxWidth / totalWidth;
@@ -1229,11 +1183,16 @@ function initStripe() {
   return stripe;
 }
 
+// Track if modal is in processing state (prevent closing)
+let modalProcessing = false;
+
 // Create modal element
 function createModal(content, onClose) {
   // Remove existing modal if any
   let existing = document.getElementById('purchase-modal');
   if (existing) existing.remove();
+
+  modalProcessing = false;
 
   let overlay = document.createElement('div');
   overlay.id = 'purchase-modal';
@@ -1247,9 +1206,9 @@ function createModal(content, onClose) {
 
   document.body.appendChild(overlay);
 
-  // Close on overlay click
+  // Close on overlay click (only if not processing)
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) {
+    if (e.target === overlay && !modalProcessing) {
       closeModal();
       if (onClose) onClose();
     }
@@ -1259,9 +1218,21 @@ function createModal(content, onClose) {
 }
 
 function closeModal() {
+  // Don't close if processing
+  if (modalProcessing) return;
+
   let modal = document.getElementById('purchase-modal');
   if (modal) modal.remove();
   cardElement = null;
+}
+
+// Set modal to processing state (prevents closing)
+function setModalProcessing(processing) {
+  modalProcessing = processing;
+  const closeBtn = document.querySelector('.modal-close');
+  if (closeBtn) {
+    closeBtn.style.display = processing ? 'none' : 'block';
+  }
 }
 
 // Start digital download (free with optional tip)
@@ -1886,8 +1857,9 @@ async function handleVideoSubmit(event) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
 
-    // Show rendering message helper
+    // Show rendering message helper (prevents modal from being closed)
     const showRenderingMessage = () => {
+      setModalProcessing(true);
       const modalContent = document.querySelector('.modal-content');
       modalContent.innerHTML = `
         <h2>Rendering Your Video...</h2>
@@ -1942,9 +1914,13 @@ async function finalizeVideoOrder(paymentIntentId, email) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
 
+    // Allow modal to be closed now
+    setModalProcessing(false);
+
     // Show success message with video player
     const modalContent = document.querySelector('.modal-content');
     modalContent.innerHTML = `
+      <button class="modal-close" onclick="closeModal()">&times;</button>
       <h2>Your Video is Ready!</h2>
       <video controls autoplay loop playsinline style="width: 100%; max-width: 400px; border-radius: 8px; margin: 15px 0;">
         <source src="${data.downloadUrl}" type="video/mp4">
@@ -1957,8 +1933,12 @@ async function finalizeVideoOrder(paymentIntentId, email) {
       <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
     `;
   } catch (error) {
+    // Allow modal to be closed on error too
+    setModalProcessing(false);
+
     const modalContent = document.querySelector('.modal-content');
     modalContent.innerHTML = `
+      <button class="modal-close" onclick="closeModal()">&times;</button>
       <h2>Error</h2>
       <p>There was an error rendering your video: ${error.message}</p>
       <p>Your payment was processed. Please contact support.</p>

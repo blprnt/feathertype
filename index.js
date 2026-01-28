@@ -512,15 +512,18 @@ async function renderVideo(settings, outputPath, videoId) {
 
     console.log("Frames captured, encoding video...");
 
-    // Encode with ffmpeg
+    // Encode with ffmpeg (optimized for Android/iOS sharing compatibility)
     await new Promise((resolve, reject) => {
       const ffmpeg = spawn("ffmpeg", [
         "-y",
         "-framerate", String(fps),
         "-i", path.join(frameDir, "frame-%05d.png"),
         "-c:v", "libx264",
+        "-profile:v", "baseline",
+        "-level", "3.0",
         "-pix_fmt", "yuv420p",
         "-crf", "23",
+        "-movflags", "+faststart",
         outputPath,
       ]);
 
