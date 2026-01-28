@@ -437,6 +437,30 @@ function setup() {
     contactButton.style('background-color', 'rgba(0,0,0,0.1)');
   });
 
+  // "Follow me on Instagram" button
+  let instaButton = createDiv('Follow me on <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>');
+  instaButton.parent(bottomButtons);
+  instaButton.style('padding', '10px 20px');
+  instaButton.style('border', 'none');
+  instaButton.style('border-radius', '20px');
+  instaButton.style('font-size', '14px');
+  instaButton.style('font-family', 'Playfair Display, serif');
+  instaButton.style('background-color', 'rgba(0,0,0,0.1)');
+  instaButton.style('color', '#333');
+  instaButton.style('cursor', 'pointer');
+  instaButton.style('transition', 'all 0.2s');
+  instaButton.style('display', 'flex');
+  instaButton.style('align-items', 'center');
+  instaButton.mousePressed(() => {
+    window.open('https://www.instagram.com/blprnt', '_blank');
+  });
+  instaButton.mouseOver(() => {
+    instaButton.style('background-color', 'rgba(0,0,0,0.2)');
+  });
+  instaButton.mouseOut(() => {
+    instaButton.style('background-color', 'rgba(0,0,0,0.1)');
+  });
+
   // Use getBirdsFromSearch to load initial bird data based on displayText
   getBirdsFromSearch(displayText);
 }
