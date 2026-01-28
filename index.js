@@ -51,6 +51,14 @@ const products = {
     width: 4800,
     height: 4800,
   },
+  video: {
+    name: "Animated Video (MP4)",
+    price: 1000, // $10.00 in cents
+    width: 1080,
+    height: 1080,
+    fps: 30,
+    duration: 5, // seconds
+  },
   // Print products - verify SKUs with Prodigi catalog
   "print-12x12": {
     name: "12x12 Print",
@@ -135,6 +143,60 @@ app.post("/render-digital", async (req, res) => {
     });
   } catch (error) {
     console.error("Error rendering digital image:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create payment intent for video download
+app.post("/purchase-video", async (req, res) => {
+  try {
+    const { email, settings } = req.body;
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: products.video.price,
+      currency: "usd",
+      metadata: {
+        type: "video",
+        email: email,
+        displayText: settings.displayText || "",
+      },
+      receipt_email: email,
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      amount: products.video.price,
+    });
+  } catch (error) {
+    console.error("Error creating video payment intent:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Finalize video download - render animation frames and encode to MP4
+app.post("/finalize-video", async (req, res) => {
+  try {
+    const { paymentIntentId, settings } = req.body;
+
+    // Verify payment was successful
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (paymentIntent.status !== "succeeded") {
+      return res.status(400).json({ error: "Payment not completed" });
+    }
+
+    // Generate unique filename
+    const videoId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const outputPath = path.join(printsDir, `feathertype-${videoId}.mp4`);
+
+    // Render video with Puppeteer + ffmpeg
+    await renderVideo(settings, outputPath, videoId);
+
+    res.json({
+      success: true,
+      downloadUrl: `/prints/feathertype-${videoId}.mp4`,
+    });
+  } catch (error) {
+    console.error("Error rendering video:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -304,6 +366,135 @@ async function renderImage(settings, width, height, outputPath) {
     fs.writeFileSync(outputPath, Buffer.from(base64Data, "base64"));
 
     console.log(`Image rendered: ${outputPath}`);
+  } finally {
+    await browser.close();
+  }
+}
+
+// Render video animation with Puppeteer + ffmpeg
+async function renderVideo(settings, outputPath, videoId) {
+  const { spawn } = await import("node:child_process");
+
+  const frameDir = path.join(printsDir, `frames-${videoId}`);
+  fs.mkdirSync(frameDir, { recursive: true });
+
+  const { width, height, fps, duration } = products.video;
+  const totalFrames = fps * duration;
+
+  // Try to find Chrome
+  const possiblePaths = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+  ];
+
+  let executablePath = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      executablePath = p;
+      break;
+    }
+  }
+
+  const browser = await puppeteer.launch({
+    headless: "new",
+    executablePath: executablePath,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
+  });
+
+  try {
+    const page = await browser.newPage();
+
+    await page.setViewport({
+      width: width,
+      height: height,
+      deviceScaleFactor: 1,
+    });
+
+    // Inject server parameters with video mode
+    await page.evaluateOnNewDocument((params) => {
+      window.SERVER_PARAMS = params;
+    }, {
+      settings: settings,
+      width: width,
+      height: height,
+      serverMode: true,
+      videoMode: true,
+      totalFrames: totalFrames,
+      fps: fps,
+    });
+
+    await page.goto(LOCAL_URL, { waitUntil: "networkidle0" });
+
+    console.log(`Rendering ${totalFrames} frames...`);
+
+    // Capture frames
+    for (let frame = 0; frame < totalFrames; frame++) {
+      // Set animation progress
+      await page.evaluate((frameNum, total) => {
+        if (window.setAnimationFrame) {
+          window.setAnimationFrame(frameNum, total);
+        }
+      }, frame, totalFrames);
+
+      // Small delay for render
+      await new Promise(r => setTimeout(r, 50));
+
+      // Capture frame
+      const dataUrl = await page.evaluate(() => {
+        const canvas = document.querySelector("canvas");
+        return canvas ? canvas.toDataURL("image/png") : null;
+      });
+
+      if (dataUrl) {
+        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+        const framePath = path.join(frameDir, `frame-${String(frame).padStart(5, "0")}.png`);
+        fs.writeFileSync(framePath, Buffer.from(base64Data, "base64"));
+      }
+
+      if (frame % 30 === 0) {
+        console.log(`Frame ${frame}/${totalFrames}`);
+      }
+    }
+
+    console.log("Frames captured, encoding video...");
+
+    // Encode with ffmpeg
+    await new Promise((resolve, reject) => {
+      const ffmpeg = spawn("ffmpeg", [
+        "-y",
+        "-framerate", String(fps),
+        "-i", path.join(frameDir, "frame-%05d.png"),
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-crf", "23",
+        outputPath,
+      ]);
+
+      ffmpeg.stderr.on("data", (data) => {
+        console.log(`ffmpeg: ${data}`);
+      });
+
+      ffmpeg.on("close", (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`ffmpeg exited with code ${code}`));
+        }
+      });
+
+      ffmpeg.on("error", reject);
+    });
+
+    // Cleanup frames
+    fs.rmSync(frameDir, { recursive: true, force: true });
+
+    console.log(`Video rendered: ${outputPath}`);
   } finally {
     await browser.close();
   }

@@ -8,6 +8,9 @@ Feather Text Generator - Creates text with bird feathers above each letter
 let serverMode = false;
 let serverParams = null;
 let serverLetterData = null; // Pre-built letter data from client
+let videoMode = false;
+let currentFrame = 0;
+let totalFrames = 150;
 
 // Global Variables
 let birds;
@@ -115,10 +118,16 @@ function preload() {
 function setup() {
   // Server mode: use provided dimensions, skip UI
   if (serverMode && serverParams) {
+    // Check for video mode
+    if (serverParams.videoMode) {
+      videoMode = true;
+      totalFrames = serverParams.totalFrames || 150;
+    }
+
     // Calculate scale factor based on desired output vs base canvas
-    const baseSize = 1200;
+    const baseSize = videoMode ? serverParams.width : 1200;
     const outputSize = serverParams.width || 4800;
-    const scaleFactor = outputSize / baseSize;
+    const scaleFactor = videoMode ? 1 : outputSize / baseSize;
 
     // Use base canvas size with high pixel density for crisp output
     createCanvas(baseSize, baseSize);
@@ -168,10 +177,9 @@ function setup() {
   }
 
   // Normal client mode
-  // Create a large square canvas that can hold all content
-  // We'll position it to show only what fits in the window
-  createCanvas(1200, 1200);
-  pixelDensity(4);
+  // Create canvas for on-screen display
+  createCanvas(800, 800);
+  pixelDensity(2);
   textFont(myFont);
 
   // Pick random background color FIRST
@@ -1081,11 +1089,11 @@ function startDigitalDownload() {
     <h2>Download High-Resolution Image</h2>
     <p>Your high-res image is free! If you'd like to support this project, consider sending a tip.</p>
     <div class="venmo-tip-box">
-      <a href="https://venmo.com/u/Jer-Thorp" target="_blank" class="venmo-link">
+      <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=5&note=FeatherType" target="_blank" class="venmo-link">
         <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
         <span class="venmo-handle">@Jer-Thorp</span>
       </a>
-      <p class="venmo-note">Tip any amount you'd like!</p>
+      <p class="venmo-note">Suggested tip: $5</p>
     </div>
     <button onclick="handleDigitalDownload()" id="download-button" class="submit-button">
       <span id="download-button-text">Generate High-Res Image</span>
@@ -1125,8 +1133,8 @@ async function handleDigitalDownload() {
       <p>Thanks for using FeatherType!</p>
       <a href="${data.downloadUrl}" download class="download-link">Download Image</a>
       <div class="venmo-tip-box" style="margin-top: 20px;">
-        <p style="margin: 0 0 8px 0; font-size: 14px;">Enjoying FeatherType? Consider a tip!</p>
-        <a href="https://venmo.com/u/Jer-Thorp" target="_blank" class="venmo-link">
+        <p style="margin: 0 0 8px 0; font-size: 14px;">Enjoying FeatherType? Suggested tip: $5</p>
+        <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=5&note=FeatherType" target="_blank" class="venmo-link">
           <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
           <span class="venmo-handle">@Jer-Thorp</span>
         </a>
