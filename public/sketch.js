@@ -706,6 +706,23 @@ function setupLetterPositions() {
         });
       }
       
+      // Debug logging
+      console.log(`Letter ${letter}: ${matchingBirds.length} matching birds after color filter`);
+      if (matchingBirds.length === 0) {
+        // Show what birds we had before filtering
+        let allMatching = birds.filter(b => {
+          let birdName = b.comName || b.name;
+          if (!birdName) return false;
+          let firstName = birdName.trim().split(/\s+/)[0];
+          return firstName.toUpperCase().startsWith(letter.toUpperCase());
+        });
+        console.log(`Letter ${letter}: Had ${allMatching.length} birds before color filter:`, allMatching.map(b => b.comName));
+        allMatching.forEach(b => {
+          let cd = colorMap[b.comName.toUpperCase()];
+          console.log(`  - ${b.comName}: colors=${cd?.colors?.length || 0}`);
+        });
+      }
+
       // Pick a random bird from matching ones
       if (matchingBirds.length > 0) {
         selectedBird = random(matchingBirds);
@@ -990,17 +1007,32 @@ function getBirdsFromSearch(_query) {
 
 function onSearch(_birds) {
   console.log("GOT SEARCH BIRDS: " + _birds.results.length);
+  console.log("Raw search results:", _birds);
+
   birds = _birds.results;
+
+  // Debug: show what birds we got for each starting letter
+  let birdsByLetter = {};
   birds.forEach((b) => {
     b.comName = b.name;
     b.featherProgress = 1;
     b.randomSeed = random(10000);
     colorMap[b.comName.toUpperCase()] = b;
+
+    // Track birds by starting letter
+    let firstLetter = (b.comName || '').trim().split(/\s+/)[0]?.[0]?.toUpperCase();
+    if (firstLetter) {
+      if (!birdsByLetter[firstLetter]) birdsByLetter[firstLetter] = [];
+      birdsByLetter[firstLetter].push(b.comName);
+    }
   });
+
+  console.log("Birds by starting letter:", birdsByLetter);
+  console.log("Looking for letters:", displayText.toUpperCase().split('').filter(c => c.match(/[A-Z]/)));
 
   toLoad = birds.length;
   colorCount = 0;
-  
+
   // Reset letterData so it gets regenerated with new birds
   letterData = [];
 
