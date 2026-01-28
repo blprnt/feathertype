@@ -108,8 +108,11 @@ let letterData = [];
 
 // Animation variables
 let animationStartTime = 0;
-let animationDuration = 5000; // Increased to 5 seconds to account for feather overlap
+let drawDuration = 2500; // Fast sweep for drawing feathers
+let swayDuration = 2000; // Wind sway at the end
+let animationDuration = drawDuration + swayDuration;
 let isAnimating = false;
+let windPhase = 0; // For wind sway oscillation
 
 function preload() {
   myFont = loadFont("PlayfairDisplay-VariableFont_wght.ttf");
@@ -347,7 +350,7 @@ function setup() {
   spacer.style('min-width', '10px');
 
   // Download High-Res button (free)
-  let downloadButton = createButton("Download HD");
+  let downloadButton = createButton("Get 🖼️");
   downloadButton.parent(controlsDiv);
   downloadButton.style('padding', '10px 14px');
   downloadButton.style('border', '2px solid #2563eb');
@@ -371,7 +374,7 @@ function setup() {
   });
 
   // Download Video button ($10)
-  let videoButton = createButton("Video $10");
+  let videoButton = createButton("Get 🎬 $10");
   videoButton.parent(controlsDiv);
   videoButton.style('padding', '10px 14px');
   videoButton.style('border', '2px solid #7c3aed');
@@ -727,50 +730,81 @@ function drawFeatherText() {
   background(bcolor);
 
   // Calculate animation progress (0 to 1)
-  let overallProgress;
+  let elapsedTime;
+  let drawProgress; // Progress through the drawing phase (0-1)
+  let swayProgress; // Progress through the sway phase (0-1)
+  let windAngle = 0; // Wind sway angle offset
 
   // In video mode, use frame-based progress
   if (videoMode) {
-    overallProgress = currentFrame / (totalFrames - 1);
-    overallProgress = constrain(overallProgress, 0, 1);
+    let totalProgress = currentFrame / (totalFrames - 1);
+    let drawRatio = drawDuration / animationDuration;
+
+    if (totalProgress <= drawRatio) {
+      drawProgress = totalProgress / drawRatio;
+      swayProgress = 0;
+    } else {
+      drawProgress = 1.0;
+      swayProgress = (totalProgress - drawRatio) / (1 - drawRatio);
+    }
   } else if (serverMode) {
     // In server mode (static image), skip animation - render final state
-    overallProgress = 1.0;
+    drawProgress = 1.0;
+    swayProgress = 0;
     isAnimating = false;
   } else {
-    let elapsedTime = millis() - animationStartTime;
-    overallProgress = constrain(elapsedTime / animationDuration, 0, 1);
+    elapsedTime = millis() - animationStartTime;
 
-    // Stop animating when complete (but draw one more frame)
-    if (overallProgress >= 1) {
+    if (elapsedTime <= drawDuration) {
+      drawProgress = elapsedTime / drawDuration;
+      swayProgress = 0;
+    } else {
+      drawProgress = 1.0;
+      swayProgress = (elapsedTime - drawDuration) / swayDuration;
+    }
+
+    drawProgress = constrain(drawProgress, 0, 1);
+    swayProgress = constrain(swayProgress, 0, 1);
+
+    // Stop animating when complete
+    if (elapsedTime >= animationDuration) {
       isAnimating = false;
-      overallProgress = 1.0; // Ensure we're at exactly 1.0 for final frame
+      drawProgress = 1.0;
+      swayProgress = 1.0;
     }
   }
-  
+
+  // Calculate wind sway angle during sway phase
+  if (swayProgress > 0 && (isAnimating || videoMode)) {
+    // Ease into the sway, then oscillate, then settle
+    let swayIntensity = sin(swayProgress * PI); // Ramps up and down
+    let oscillation = sin(swayProgress * PI * 4); // Multiple waves
+    windAngle = oscillation * swayIntensity * 0.15; // Max ~8.5 degrees
+  }
+
   // Draw feathers for each letter
   for (let i = 0; i < letterData.length; i++) {
     let letter = letterData[i];
-    
+
     // Start feathers earlier and extend their animation time for overlap
     // Account for the fact that feathers extend 2 letters forward
     let totalSlots = letterData.length + 2; // Add 2 slots for last feather to complete
     let featherStartTime = i / totalSlots;
     let featherEndTime = (i + 2) / totalSlots;
-    
+
     // Calculate this feather's animation progress (0 to 1)
-    let featherProgress = map(overallProgress, featherStartTime, featherEndTime, 0, 1);
+    let featherProgress = map(drawProgress, featherStartTime, featherEndTime, 0, 1);
     featherProgress = constrain(featherProgress, 0, 1);
-    
-    // Ease the progress for smoother animation
-    let easedProgress = easeInOutCubic(featherProgress);
-    
+
+    // Use a more sweeping ease - faster at the start
+    let easedProgress = easeOutQuart(featherProgress);
+
     // Draw feathers above this letter (skip for dashes)
     if (letter.char !== '-') {
       // If animating or in video mode, use calculated progress; otherwise show full
       let finalProgress = (isAnimating || videoMode) ? easedProgress : 1.0;
       if ((!isAnimating && !videoMode) || featherProgress > 0) {
-        drawFeathersForLetter(letter, finalProgress);
+        drawFeathersForLetter(letter, finalProgress, windAngle);
       }
     }
   }
@@ -778,20 +812,20 @@ function drawFeatherText() {
   // Draw the letters on top
   fill(0);
   textAlign(CENTER, TOP);
-  
+
   for (let i = 0; i < letterData.length; i++) {
     let letter = letterData[i];
-    
+
     // Letters appear later in their time window
     // Use same totalSlots calculation for consistency
     let totalSlots = letterData.length + 2;
     let letterStartTime = i / totalSlots + 0.3 / totalSlots; // Start 30% into the window
     let letterEndTime = (i + 1) / totalSlots;
-    
-    // Calculate this letter's animation progress
-    let letterProgress = map(overallProgress, letterStartTime, letterEndTime, 0, 1);
+
+    // Calculate this letter's animation progress (based on draw phase)
+    let letterProgress = map(drawProgress, letterStartTime, letterEndTime, 0, 1);
     letterProgress = constrain(letterProgress, 0, 1);
-    
+
     // Only draw if letter has started appearing
     if (letterProgress > 0) {
       // Handle dashes as vertical ticks
@@ -816,14 +850,29 @@ function drawFeatherText() {
         textSize(birdNameSize);
         let yOffset = letter.y + letter.size * 0.84; // Position based on text size
         let birdName = letter.birdName.toLowerCase();
-        
+
         // Skip the first letter since it's already shown as the big character
         let nameToDisplay = birdName.substring(1);
-        
-        for (let j = 0; j < nameToDisplay.length; j++) {
+
+        // Calculate how many characters to show based on progress
+        // Bird name animates from letterProgress 0.5 to 1.0
+        let nameProgress = map(letterProgress, 0.5, 1.0, 0, 1);
+        nameProgress = constrain(nameProgress, 0, 1);
+
+        // In sway phase or static mode, show all characters
+        let charsToShow;
+        if (!isAnimating && !videoMode) {
+          charsToShow = nameToDisplay.length;
+        } else if (swayProgress > 0) {
+          charsToShow = nameToDisplay.length;
+        } else {
+          charsToShow = floor(nameProgress * (nameToDisplay.length + 1));
+        }
+
+        for (let j = 0; j < min(charsToShow, nameToDisplay.length); j++) {
           let char = nameToDisplay[j];
           let charY = yOffset + j * (birdNameSize * 1.2);
-          
+
           // Handle dashes as vertical centered ticks
           if (char === '-') {
             push();
@@ -846,25 +895,31 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
 }
 
-function drawFeathersForLetter(letter, progress = 1) {
+// Sweepier easing - fast start, gentle end
+function easeOutQuart(t) {
+  return 1 - pow(1 - t, 4);
+}
+
+function drawFeathersForLetter(letter, progress = 1, windAngle = 0) {
   if (!letter.bird) {
     // No bird found for this letter
     return;
   }
-  
+
   let bird = letter.bird;
   let colorData = colorMap[bird.comName.toUpperCase()];
-  
+
   if (!colorData || !colorData.colors || colorData.colors.length === 0) {
     return;
   }
-  
+
   // Draw only ONE feather per letter
   let yPos = letter.featherY; // Start immediately above letter
-  
+
   push();
   translate(letter.x, yPos);
-  rotate(PI + letter.featherAngle); // Use stored angle so it doesn't change each frame
+  // Apply base angle plus wind sway
+  rotate(PI + letter.featherAngle + windAngle);
   
   // Scale feather size based on text size so they remain proportional
   let textSizeScale = letter.size / 180; // Ratio compared to base size
