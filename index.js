@@ -510,19 +510,41 @@ async function renderVideo(settings, outputPath, videoId) {
       }
     }
 
-    console.log("Frames captured, encoding video...");
+    // Save final frame as JPEG thumbnail for embedding
+    const thumbnailPath = path.join(frameDir, "thumbnail.jpg");
+    const finalFramePath = path.join(frameDir, `frame-${String(totalFrames - 1).padStart(5, "0")}.png`);
+
+    // Convert final PNG frame to JPEG thumbnail using ffmpeg
+    await new Promise((resolve, reject) => {
+      const convert = spawn("ffmpeg", [
+        "-y",
+        "-i", finalFramePath,
+        "-q:v", "2",
+        thumbnailPath,
+      ]);
+      convert.on("close", (code) => code === 0 ? resolve() : reject(new Error("Thumbnail conversion failed")));
+      convert.on("error", reject);
+    });
+
+    console.log("Frames captured, encoding video with thumbnail...");
 
     // Encode with ffmpeg (optimized for Android/iOS sharing compatibility)
+    // Attach thumbnail as poster image
     await new Promise((resolve, reject) => {
       const ffmpeg = spawn("ffmpeg", [
         "-y",
         "-framerate", String(fps),
         "-i", path.join(frameDir, "frame-%05d.png"),
-        "-c:v", "libx264",
-        "-profile:v", "baseline",
+        "-i", thumbnailPath,
+        "-map", "0:v",
+        "-map", "1:v",
+        "-c:v:0", "libx264",
+        "-c:v:1", "mjpeg",
+        "-profile:v:0", "baseline",
         "-level", "3.0",
         "-pix_fmt", "yuv420p",
         "-crf", "23",
+        "-disposition:v:1", "attached_pic",
         "-movflags", "+faststart",
         outputPath,
       ]);

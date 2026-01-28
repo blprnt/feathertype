@@ -99,7 +99,7 @@ let myFont;
 const defaultPhrases = [
   "FLOCK TOGETHER",
   "LOVE IS A THING WITH FEATHERS",
-  "THEY AIN'T GONNA COUNT THEMSELVES"
+  "BECAUSE IT HAS A SONG."
 ];
 let displayText = defaultPhrases[Math.floor(Math.random() * defaultPhrases.length)];
 
@@ -857,6 +857,7 @@ function drawFeatherText() {
         let birdNameSize = letter.size * 0.1; // Scale to 10% of main text size
         birdNameSize = max(birdNameSize, 12); // Minimum 12px for legibility
         textSize(birdNameSize);
+        fill(100); // Lighter gray for bird names
         let yOffset = letter.y + letter.size * 0.84; // Position based on text size
         let birdName = letter.birdName.toLowerCase();
 
@@ -892,6 +893,7 @@ function drawFeatherText() {
             text(char, letter.x, charY);
           }
         }
+        fill(0); // Reset to black for next letter
       }
     }
   }
