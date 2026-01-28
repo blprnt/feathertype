@@ -1664,6 +1664,34 @@ function showPrintInfo() {
 // Make showPrintInfo available globally
 window.showPrintInfo = showPrintInfo;
 
+// Show sample video in a player
+function showSampleVideo() {
+  const videoModal = document.createElement('div');
+  videoModal.id = 'sample-video-modal';
+  videoModal.className = 'modal-overlay';
+  videoModal.innerHTML = `
+    <div class="modal-content" style="max-width: 500px;">
+      <button class="modal-close" onclick="document.getElementById('sample-video-modal').remove()">&times;</button>
+      <h2>Sample Video</h2>
+      <video controls autoplay loop playsinline style="width: 100%; border-radius: 8px; margin: 15px 0;">
+        <source src="/prints/feathertype-1769623470552-08i1r32em.mp4" type="video/mp4">
+        Your browser does not support video playback.
+      </video>
+      <button onclick="document.getElementById('sample-video-modal').remove()" class="submit-button">Close</button>
+    </div>
+  `;
+  document.body.appendChild(videoModal);
+
+  // Close on overlay click
+  videoModal.addEventListener('click', (e) => {
+    if (e.target === videoModal) {
+      videoModal.remove();
+    }
+  });
+}
+
+window.showSampleVideo = showSampleVideo;
+
 // Start video purchase
 function startVideoPurchase() {
   currentPurchase.type = 'video';
@@ -1680,7 +1708,7 @@ function startVideoPurchase() {
       <img src="${thumbnail}" style="max-width: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
     </div>` : ''}
     <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-      <a href="/prints/feathertype-1769623470552-08i1r32em.mp4" target="_blank" style="color: #2563eb;">See sample video →</a><br>
+      <a href="#" onclick="showSampleVideo(); return false;" style="color: #2563eb;">See sample video →</a><br>
       Videos are rendered on our server and may take 1-2 minutes to generate.
     </p>
     <form id="video-form" onsubmit="handleVideoSubmit(event)">
@@ -1873,12 +1901,17 @@ async function finalizeVideoOrder(paymentIntentId, email) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
 
-    // Show success message with download link
+    // Show success message with video player
     const modalContent = document.querySelector('.modal-content');
     modalContent.innerHTML = `
       <h2>Your Video is Ready!</h2>
-      <p>Thanks for your purchase!</p>
-      <a href="${data.downloadUrl}" download class="download-link">Download Video</a>
+      <video controls autoplay loop playsinline style="width: 100%; max-width: 400px; border-radius: 8px; margin: 15px 0;">
+        <source src="${data.downloadUrl}" type="video/mp4">
+        Your browser does not support video playback.
+      </video>
+      <div style="text-align: center;">
+        <a href="${data.downloadUrl}" download class="download-link">Download Video</a>
+      </div>
       <p class="modal-note" style="margin-top: 15px;">A receipt has been sent to ${email}</p>
       <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
     `;
