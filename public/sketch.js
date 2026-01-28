@@ -767,9 +767,9 @@ function drawFeatherText() {
     
     // Draw feathers above this letter (skip for dashes)
     if (letter.char !== '-') {
-      // If not animating, show feathers at full progress
-      let finalProgress = isAnimating ? easedProgress : 1.0;
-      if (!isAnimating || featherProgress > 0) {
+      // If animating or in video mode, use calculated progress; otherwise show full
+      let finalProgress = (isAnimating || videoMode) ? easedProgress : 1.0;
+      if ((!isAnimating && !videoMode) || featherProgress > 0) {
         drawFeathersForLetter(letter, finalProgress);
       }
     }
