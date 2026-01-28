@@ -803,8 +803,19 @@ function drawFeatherText() {
     if (letter.char !== '-') {
       // If animating or in video mode, use calculated progress; otherwise show full
       let finalProgress = (isAnimating || videoMode) ? easedProgress : 1.0;
+
+      // Add individual feather sway as it appears (gentle settling motion)
+      let featherSway = 0;
+      if ((isAnimating || videoMode) && featherProgress > 0 && featherProgress < 1) {
+        // Oscillate as feather draws in, dampening as it completes
+        let swayIntensity = (1 - featherProgress) * 0.12; // Stronger at start, fades out
+        featherSway = sin(featherProgress * PI * 3) * swayIntensity;
+      }
+
+      let totalSway = windAngle + featherSway;
+
       if ((!isAnimating && !videoMode) || featherProgress > 0) {
-        drawFeathersForLetter(letter, finalProgress, windAngle);
+        drawFeathersForLetter(letter, finalProgress, totalSway);
       }
     }
   }
@@ -855,19 +866,18 @@ function drawFeatherText() {
         let nameToDisplay = birdName.substring(1);
 
         // Calculate how many characters to show based on progress
-        // Bird name animates from letterProgress 0.5 to 1.0
-        let nameProgress = map(letterProgress, 0.5, 1.0, 0, 1);
-        nameProgress = constrain(nameProgress, 0, 1);
-
-        // In sway phase or static mode, show all characters
-        let charsToShow;
+        // Bird name animates from letterProgress 0.5 through entire sway phase
+        let nameProgress;
         if (!isAnimating && !videoMode) {
-          charsToShow = nameToDisplay.length;
-        } else if (swayProgress > 0) {
-          charsToShow = nameToDisplay.length;
+          nameProgress = 1.0;
         } else {
-          charsToShow = floor(nameProgress * (nameToDisplay.length + 1));
+          // Start at letterProgress 0.5, continue through sway phase
+          let drawPart = map(letterProgress, 0.5, 1.0, 0, 0.5);
+          let swayPart = swayProgress * 0.5;
+          nameProgress = constrain(drawPart + swayPart, 0, 1);
         }
+
+        let charsToShow = floor(nameProgress * (nameToDisplay.length + 1));
 
         for (let j = 0; j < min(charsToShow, nameToDisplay.length); j++) {
           let char = nameToDisplay[j];
