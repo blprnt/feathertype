@@ -301,23 +301,65 @@ async function renderImage(settings, width, height, outputPath) {
   }
 }
 
-// Get shipping estimate (fixed rates by region)
-// Prodigi's quote API requires accessible image URLs, so we use estimates
+// Get shipping quote from Prodigi
 async function getProdigiShippingQuote(address, sku) {
-  // Estimated shipping rates in cents based on destination
+  try {
+    const response = await fetch(`${PRODIGI_API_URL}/quotes`, {
+      method: "POST",
+      headers: {
+        "X-API-Key": process.env.PRODIGI_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        shippingMethod: "Standard",
+        destinationCountryCode: address.country,
+        items: [
+          {
+            sku: sku,
+            copies: 1,
+            assets: [
+              {
+                printArea: "default",
+                // Use a reliable public placeholder image
+                url: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png",
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.outcome !== "Created") {
+      console.error("Prodigi Quote API error:", data);
+      // Fall back to estimates if API fails
+      return getFallbackShippingEstimate(address, sku);
+    }
+
+    // Return shipping cost in cents
+    const shippingCost = data.quotes?.[0]?.shipmentSummary?.shipping?.cost?.amount || "0";
+    return Math.round(parseFloat(shippingCost) * 100);
+  } catch (error) {
+    console.error("Prodigi Quote error:", error);
+    // Fall back to estimates if API fails
+    return getFallbackShippingEstimate(address, sku);
+  }
+}
+
+// Fallback shipping estimates if Prodigi API fails
+function getFallbackShippingEstimate(address, sku) {
   const shippingRates = {
-    US: 599,   // $5.99 - United States
-    CA: 899,   // $8.99 - Canada
-    GB: 699,   // $6.99 - United Kingdom
-    AU: 1199,  // $11.99 - Australia
-    DEFAULT: 1299, // $12.99 - International
+    US: 599,
+    CA: 899,
+    GB: 699,
+    AU: 1199,
+    DEFAULT: 1299,
   };
 
   const rate = shippingRates[address.country] || shippingRates.DEFAULT;
-
-  // Add extra for framed items (heavier)
   const isFramed = sku.includes("CFPM") || sku.toLowerCase().includes("frame");
-  const framedSurcharge = isFramed ? 500 : 0; // +$5 for framed
+  const framedSurcharge = isFramed ? 500 : 0;
 
   return rate + framedSurcharge;
 }
