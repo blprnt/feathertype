@@ -219,6 +219,7 @@ function setup() {
   textInput.style('border', '2px solid #333');
   textInput.style('border-radius', '8px');
   textInput.style('font-size', '16px');
+  textInput.style('font-family', 'Playfair Display, serif');
   textInput.style('background-color', '#fff');
   textInput.style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)');
   textInput.style('min-width', '150px');
@@ -369,6 +370,30 @@ function setup() {
     printButton.style('transform', 'translateY(0)');
   });
 
+  // "What is this?" button at bottom
+  let infoButton = createButton("What is this?");
+  infoButton.style('position', 'fixed');
+  infoButton.style('bottom', '20px');
+  infoButton.style('left', '50%');
+  infoButton.style('transform', 'translateX(-50%)');
+  infoButton.style('padding', '10px 20px');
+  infoButton.style('border', 'none');
+  infoButton.style('border-radius', '20px');
+  infoButton.style('font-size', '14px');
+  infoButton.style('font-family', 'Playfair Display, serif');
+  infoButton.style('background-color', 'rgba(0,0,0,0.1)');
+  infoButton.style('color', '#333');
+  infoButton.style('cursor', 'pointer');
+  infoButton.style('transition', 'all 0.2s');
+  infoButton.style('z-index', '1000');
+  infoButton.mousePressed(() => showInfoModal());
+  infoButton.mouseOver(() => {
+    infoButton.style('background-color', 'rgba(0,0,0,0.2)');
+  });
+  infoButton.mouseOut(() => {
+    infoButton.style('background-color', 'rgba(0,0,0,0.1)');
+  });
+
   // Use getBirdsFromSearch to load initial bird data based on displayText
   getBirdsFromSearch(displayText);
 }
@@ -383,17 +408,21 @@ function draw() {
   }
 
   if (birds === undefined || colorCount < 0) {
+    background(bcolor);
     fill(0);
+    textFont(myFont);
     textAlign(CENTER, CENTER);
-    textSize(16);
+    textSize(24);
     text("Waiting for bird data to load...", width / 2, height / 2);
     return;
   }
 
   if (toLoad === 0) {
+    background(bcolor);
     fill(0);
+    textFont(myFont);
     textAlign(CENTER, CENTER);
-    textSize(16);
+    textSize(24);
     text("No birds found for this search term.", width / 2, height / 2);
     noLoop();
   } else if (birds && colorCount == toLoad) {
@@ -415,9 +444,11 @@ function draw() {
       noLoop();
     }
   } else {
+    background(bcolor);
     fill(0);
+    textFont(myFont);
     textAlign(CENTER, CENTER);
-    textSize(16);
+    textSize(24);
     text(
       `Loading colors... (${colorCount} / ${toLoad})`,
       width / 2,
@@ -1387,8 +1418,22 @@ async function finalizePrintOrder(paymentIntentId) {
   }
 }
 
+// Show info modal
+function showInfoModal() {
+  const modalContent = `
+    <h2>What is FeatherType?</h2>
+    <p>FeatherType generates unique text art using the colors of bird feathers. Each letter is paired with a bird whose name starts with that letter, and the feather above is drawn using that bird's actual plumage colors.</p>
+    <p>Type any word or phrase, and watch as birds from around the world come together to spell it out.</p>
+    <p>Created by <a href="https://jerthorp.com" target="_blank" style="color: #2563eb;">Jer Thorp</a></p>
+    <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
+  `;
+
+  createModal(modalContent);
+}
+
 // Make functions available globally for onclick handlers
 window.handleDigitalDownload = handleDigitalDownload;
 window.handleAddressSubmit = handleAddressSubmit;
 window.handlePrintPayment = handlePrintPayment;
 window.closeModal = closeModal;
+window.showInfoModal = showInfoModal;
