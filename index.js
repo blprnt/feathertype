@@ -53,7 +53,7 @@ const products = {
   },
   video: {
     name: "Animated Video (MP4)",
-    price: 1000, // $10.00 in cents
+    price: 500, // $5.00 in cents
     width: 1080,
     height: 1080,
     fps: 30,
