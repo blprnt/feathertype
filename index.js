@@ -393,6 +393,7 @@ async function submitProdigiOrder(imageUrl, address, email, sku) {
         {
           sku: sku,
           copies: 1,
+          sizing: "fillPrintArea",
           assets: [
             {
               printArea: "default",
