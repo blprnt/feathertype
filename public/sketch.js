@@ -98,7 +98,7 @@ let myFont;
 // Default phrases to randomly choose from
 const defaultPhrases = [
   "FLOCK TOGETHER",
-  "LOVE IS A THING WITH FEATHERS",
+  "HOPE IS A THING WITH FEATHERS",
   "BECAUSE IT HAS A SONG."
 ];
 let displayText = defaultPhrases[Math.floor(Math.random() * defaultPhrases.length)];
