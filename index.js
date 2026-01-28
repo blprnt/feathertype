@@ -125,6 +125,27 @@ app.get("/prints/:filename", (req, res) => {
   }
 });
 
+// Check discount code validity
+app.post("/check-discount", (req, res) => {
+  const { discountCode, productPrice } = req.body;
+
+  if (!discountCode) {
+    return res.json({ valid: false });
+  }
+
+  const discount = discountCodes[discountCode.toUpperCase()];
+  if (discount !== undefined) {
+    const discountedPrice = Math.round(productPrice * (1 - discount));
+    res.json({
+      valid: true,
+      discountPercent: discount,
+      discountedPrice: discountedPrice,
+    });
+  } else {
+    res.json({ valid: false });
+  }
+});
+
 // Render high-res digital download (free)
 app.post("/render-digital", async (req, res) => {
   try {
@@ -452,6 +473,9 @@ async function renderVideo(settings, outputPath, videoId) {
     });
 
     await page.goto(LOCAL_URL, { waitUntil: "networkidle0" });
+
+    // Wait for video mode to be ready
+    await page.waitForSelector("#video-ready", { timeout: 60000 });
 
     console.log(`Rendering ${totalFrames} frames...`);
 

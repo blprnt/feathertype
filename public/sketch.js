@@ -179,6 +179,16 @@ function setup() {
       // Fallback: fetch birds (won't match client)
       getBirdsFromSearch(displayText);
     }
+
+    // In video mode, stop automatic loop - server controls frame-by-frame with setAnimationFrame
+    if (videoMode) {
+      noLoop();
+      // Signal that video mode is ready for frame capture
+      let ready = document.createElement('div');
+      ready.id = 'video-ready';
+      ready.style.display = 'none';
+      document.body.appendChild(ready);
+    }
     return;
   }
 
@@ -437,11 +447,17 @@ function setup() {
 }
 
 function draw() {
-  // Server mode with pre-built data - render immediately
-  if (serverMode && serverLetterData && letterData.length > 0) {
+  // Server mode with pre-built data - render immediately (but not video mode)
+  if (serverMode && !videoMode && serverLetterData && letterData.length > 0) {
     drawFeatherText();
     signalRenderComplete();
     noLoop();
+    return;
+  }
+
+  // Video mode - just draw current frame, server controls frame advancement
+  if (videoMode && letterData.length > 0) {
+    drawFeatherText();
     return;
   }
 
@@ -713,8 +729,12 @@ function drawFeatherText() {
   // Calculate animation progress (0 to 1)
   let overallProgress;
 
-  // In server mode, skip animation - render final state
-  if (serverMode) {
+  // In video mode, use frame-based progress
+  if (videoMode) {
+    overallProgress = currentFrame / (totalFrames - 1);
+    overallProgress = constrain(overallProgress, 0, 1);
+  } else if (serverMode) {
+    // In server mode (static image), skip animation - render final state
     overallProgress = 1.0;
     isAnimating = false;
   } else {
@@ -1045,6 +1065,17 @@ function signalRenderComplete() {
   }
 }
 
+// Set animation frame for video rendering (called by server)
+function setAnimationFrame(frameNum, total) {
+  currentFrame = frameNum;
+  totalFrames = total;
+  // Redraw with new frame
+  redraw();
+}
+
+// Expose for server-side video rendering
+window.setAnimationFrame = setAnimationFrame;
+
 // Get current design settings for server rendering
 function getCurrentSettings() {
   return {
@@ -1117,6 +1148,7 @@ function closeModal() {
 function startDigitalDownload() {
   const modalContent = `
     <h2>Download High-Resolution Image</h2>
+    <p style="margin-bottom: 8px;"><strong>4800 x 4800 pixels</strong> (16" x 16" at 300 DPI)</p>
     <p>Your high-res image is free! If you'd like to support this project, consider sending a tip.</p>
     <div class="venmo-tip-box">
       <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=5&note=FeatherType" target="_blank" class="venmo-link">
@@ -1126,7 +1158,7 @@ function startDigitalDownload() {
       <p class="venmo-note">Suggested tip: $5</p>
     </div>
     <button onclick="handleDigitalDownload()" id="download-button" class="submit-button">
-      <span id="download-button-text">Generate High-Res Image</span>
+      <span id="download-button-text">Get 🖼️</span>
       <span id="download-spinner" class="spinner hidden"></span>
     </button>
   `;
@@ -1477,7 +1509,7 @@ function startVideoPurchase() {
 
   const modalContent = `
     <h2>Download Animated Video</h2>
-    <p class="modal-price">$10.00</p>
+    <p class="modal-price" id="video-price">$10.00</p>
     <p>Get a 5-second animated MP4 video (1080x1080) of your feather text design.</p>
     <form id="video-form" onsubmit="handleVideoSubmit(event)">
       <div class="form-group">
@@ -1487,6 +1519,7 @@ function startVideoPurchase() {
       <div class="form-group">
         <label for="video-discount">Discount Code (optional)</label>
         <input type="text" id="video-discount" name="discountCode" placeholder="Enter code">
+        <div id="discount-status" style="font-size: 13px; margin-top: 4px;"></div>
       </div>
       <div id="card-section">
         <div class="form-group">
@@ -1496,13 +1529,21 @@ function startVideoPurchase() {
         </div>
       </div>
       <button type="submit" id="video-submit" class="submit-button">
-        <span id="video-button-text">Pay $10.00</span>
+        <span id="video-button-text">Get 🎬 $10.00</span>
         <span id="video-spinner" class="spinner hidden"></span>
       </button>
     </form>
   `;
 
   createModal(modalContent);
+
+  // Add discount code checker
+  const discountInput = document.getElementById('video-discount');
+  let discountTimeout;
+  discountInput.addEventListener('input', () => {
+    clearTimeout(discountTimeout);
+    discountTimeout = setTimeout(() => checkVideoDiscount(), 500);
+  });
 
   // Initialize Stripe Elements
   initStripe();
@@ -1523,6 +1564,54 @@ function startVideoPurchase() {
       const displayError = document.getElementById('card-errors');
       displayError.textContent = event.error ? event.error.message : '';
     });
+  }
+}
+
+// Check video discount code and update price display
+async function checkVideoDiscount() {
+  const discountCode = document.getElementById('video-discount').value.trim();
+  const priceEl = document.getElementById('video-price');
+  const buttonText = document.getElementById('video-button-text');
+  const cardSection = document.getElementById('card-section');
+  const statusEl = document.getElementById('discount-status');
+
+  if (!discountCode) {
+    priceEl.textContent = '$10.00';
+    buttonText.textContent = 'Get 🎬 $10.00';
+    cardSection.classList.remove('hidden');
+    statusEl.textContent = '';
+    return;
+  }
+
+  try {
+    const response = await fetch('/check-discount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discountCode, productPrice: 1000 }),
+    });
+
+    const data = await response.json();
+    if (data.valid) {
+      const newPrice = data.discountedPrice / 100;
+      if (newPrice === 0) {
+        priceEl.textContent = 'FREE';
+        buttonText.textContent = 'Get 🎬';
+        cardSection.classList.add('hidden');
+        statusEl.innerHTML = '<span style="color: #059669;">100% discount applied!</span>';
+      } else {
+        priceEl.textContent = `$${newPrice.toFixed(2)}`;
+        buttonText.textContent = `Get 🎬 $${newPrice.toFixed(2)}`;
+        cardSection.classList.remove('hidden');
+        statusEl.innerHTML = `<span style="color: #059669;">${Math.round(data.discountPercent * 100)}% discount applied!</span>`;
+      }
+    } else {
+      priceEl.textContent = '$10.00';
+      buttonText.textContent = 'Get 🎬 $10.00';
+      cardSection.classList.remove('hidden');
+      statusEl.innerHTML = '<span style="color: #dc2626;">Invalid code</span>';
+    }
+  } catch (error) {
+    statusEl.textContent = '';
   }
 }
 
