@@ -96,6 +96,41 @@ if (!fs.existsSync(printsDir)) {
   fs.mkdirSync(printsDir, { recursive: true });
 }
 
+// Security: Sanitize and validate settings from client
+const MAX_PHRASE_LENGTH = 50;
+function sanitizeSettings(settings) {
+  if (!settings) return settings;
+
+  // Sanitize displayText
+  if (settings.displayText) {
+    let text = String(settings.displayText).slice(0, MAX_PHRASE_LENGTH);
+    settings.displayText = text.replace(/[^A-Z0-9\s\-'.!?]/gi, '').toUpperCase();
+  }
+
+  // Validate backgroundColor is array of 3 numbers
+  if (settings.backgroundColor) {
+    if (!Array.isArray(settings.backgroundColor) || settings.backgroundColor.length !== 3) {
+      settings.backgroundColor = null;
+    } else {
+      settings.backgroundColor = settings.backgroundColor.map(c =>
+        Math.max(0, Math.min(255, parseInt(c) || 0))
+      );
+    }
+  }
+
+  // Validate letterData
+  if (settings.letterData && Array.isArray(settings.letterData)) {
+    settings.letterData = settings.letterData.slice(0, MAX_PHRASE_LENGTH).map(l => ({
+      char: String(l.char || '').slice(0, 1),
+      birdName: String(l.birdName || '').slice(0, 100).replace(/[<>]/g, ''),
+      featherAngle: parseFloat(l.featherAngle) || 0,
+      randomSeed: parseFloat(l.randomSeed) || 0,
+    }));
+  }
+
+  return settings;
+}
+
 // Create Express app
 const app = express();
 app.use(express.json());
@@ -150,7 +185,7 @@ app.post("/check-discount", (req, res) => {
 // Render high-res digital download (free)
 app.post("/render-digital", async (req, res) => {
   try {
-    const { settings } = req.body;
+    const settings = sanitizeSettings(req.body.settings);
 
     // Generate unique filename
     const filename = `feathertype-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.png`;
@@ -172,7 +207,8 @@ app.post("/render-digital", async (req, res) => {
 // Create payment intent for video download
 app.post("/purchase-video", async (req, res) => {
   try {
-    const { email, settings, discountCode } = req.body;
+    const { email, discountCode } = req.body;
+    const settings = sanitizeSettings(req.body.settings);
 
     let videoPrice = products.video.price;
     let discount = 0;
@@ -218,7 +254,8 @@ app.post("/purchase-video", async (req, res) => {
 // Finalize video download - render animation frames and encode to MP4
 app.post("/finalize-video", async (req, res) => {
   try {
-    const { paymentIntentId, settings } = req.body;
+    const { paymentIntentId } = req.body;
+    const settings = sanitizeSettings(req.body.settings);
 
     // Verify payment was successful (skip if free with discount code)
     if (paymentIntentId) {
@@ -248,7 +285,8 @@ app.post("/finalize-video", async (req, res) => {
 // Get shipping quote from Prodigi and create payment intent
 app.post("/get-quote", async (req, res) => {
   try {
-    const { address, email, discountCode, settings, productType } = req.body;
+    const { address, email, discountCode, productType } = req.body;
+    const settings = sanitizeSettings(req.body.settings);
 
     const product = products[productType];
     if (!product || productType === 'digital') {
@@ -301,7 +339,8 @@ app.post("/get-quote", async (req, res) => {
 // Finalize print order - render image and submit to Prodigi
 app.post("/finalize-order", async (req, res) => {
   try {
-    const { paymentIntentId, settings, address, email, productType, frameColor } = req.body;
+    const { paymentIntentId, address, email, productType, frameColor } = req.body;
+    const settings = sanitizeSettings(req.body.settings);
 
     const product = products[productType];
     if (!product || productType === 'digital') {

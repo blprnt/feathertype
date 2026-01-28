@@ -259,8 +259,11 @@ function setup() {
   controlsDiv.id('controls');
 
   // Input for custom text
+  const MAX_PHRASE_LENGTH = 50;
+
   let textInput = createInput(displayText);
   textInput.parent(controlsDiv);
+  textInput.attribute('maxlength', MAX_PHRASE_LENGTH);
   textInput.style('padding', '10px');
   textInput.style('border', '2px solid #333');
   textInput.style('border-radius', '8px');
@@ -271,10 +274,12 @@ function setup() {
   textInput.style('min-width', '150px');
   textInput.style('flex', '1 1 200px');
   textInput.style('max-width', '300px');
-  
+
   // Function to update text and fetch new birds
   const updateText = () => {
-    displayText = textInput.value().toUpperCase();
+    // Sanitize: only allow letters, numbers, spaces, and basic punctuation
+    let rawText = textInput.value().toUpperCase().slice(0, MAX_PHRASE_LENGTH);
+    displayText = rawText.replace(/[^A-Z0-9\s\-'.!?]/g, '');
 
     // Pick new random background color for canvas only
     let bgArray = random(backgroundColors);
