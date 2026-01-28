@@ -29,10 +29,13 @@ const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const LOCAL_URL = `http://localhost:${PORT}`; // Always use local URL for Puppeteer rendering
 
-// Parse discount codes from environment
+// Parse discount codes from environment (normalize keys to uppercase)
 let discountCodes = {};
 try {
-  discountCodes = JSON.parse(process.env.DISCOUNT_CODES || "{}");
+  const parsed = JSON.parse(process.env.DISCOUNT_CODES || "{}");
+  for (const [key, value] of Object.entries(parsed)) {
+    discountCodes[key.toUpperCase()] = value;
+  }
 } catch (e) {
   console.error("Error parsing DISCOUNT_CODES:", e);
 }
