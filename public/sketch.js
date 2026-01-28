@@ -1461,7 +1461,7 @@ function showInfoModal() {
   const modalContent = `
     <h2>What is FeatherType?</h2>
     <p>FeatherType generates unique text art using the colors of bird feathers. Each letter is paired with a bird whose name starts with that letter.</p>
-    <p>The colors for each feather are extracted from bird photographs on Wikipedia, capturing the actual plumage palette of each species.</p>
+    <p>The colors for each feather are extracted from plumage descriptions on Wikipedia, translating words into the palette of each species.</p>
     <p>Type any word or phrase, and watch as birds from around the world come together to spell it out.</p>
     <p><a href="https://www.jerthorp.me/post/of-a-feather" target="_blank" style="color: #2563eb;">Read more about the project</a></p>
     <p style="margin-top: 10px;">Created by <a href="https://jerthorp.com" target="_blank" style="color: #2563eb;">Jer Thorp</a></p>
@@ -1485,9 +1485,15 @@ function startVideoPurchase() {
         <input type="email" id="video-email" name="email" required placeholder="your@email.com">
       </div>
       <div class="form-group">
-        <label>Card Details</label>
-        <div id="card-element"></div>
-        <div id="card-errors" class="error-message"></div>
+        <label for="video-discount">Discount Code (optional)</label>
+        <input type="text" id="video-discount" name="discountCode" placeholder="Enter code">
+      </div>
+      <div id="card-section">
+        <div class="form-group">
+          <label>Card Details</label>
+          <div id="card-element"></div>
+          <div id="card-errors" class="error-message"></div>
+        </div>
       </div>
       <button type="submit" id="video-submit" class="submit-button">
         <span id="video-button-text">Pay $10.00</span>
@@ -1533,6 +1539,7 @@ async function handleVideoSubmit(event) {
   spinner.classList.remove('hidden');
 
   const email = document.getElementById('video-email').value;
+  const discountCode = document.getElementById('video-discount').value;
 
   try {
     // Create payment intent
@@ -1541,12 +1548,32 @@ async function handleVideoSubmit(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: email,
+        discountCode: discountCode,
         settings: getCurrentSettings(),
       }),
     });
 
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
+
+    // Show rendering message helper
+    const showRenderingMessage = () => {
+      const modalContent = document.querySelector('.modal-content');
+      modalContent.innerHTML = `
+        <h2>Rendering Your Video...</h2>
+        <p>This may take a minute. Please wait.</p>
+        <div style="display: flex; justify-content: center; margin: 30px 0;">
+          <span class="spinner" style="width: 40px; height: 40px; border-width: 3px;"></span>
+        </div>
+      `;
+    };
+
+    // Handle free video (100% discount)
+    if (data.freeWithCode) {
+      showRenderingMessage();
+      await finalizeVideoOrder(null, email);
+      return;
+    }
 
     // Confirm payment
     const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
@@ -1558,17 +1585,7 @@ async function handleVideoSubmit(event) {
     }
 
     if (paymentIntent.status === 'succeeded') {
-      // Show rendering message
-      const modalContent = document.querySelector('.modal-content');
-      modalContent.innerHTML = `
-        <h2>Rendering Your Video...</h2>
-        <p>This may take a minute. Please wait.</p>
-        <div style="display: flex; justify-content: center; margin: 30px 0;">
-          <span class="spinner" style="width: 40px; height: 40px; border-width: 3px;"></span>
-        </div>
-      `;
-
-      // Finalize video
+      showRenderingMessage();
       await finalizeVideoOrder(paymentIntent.id, email);
     }
   } catch (error) {

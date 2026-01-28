@@ -150,22 +150,42 @@ app.post("/render-digital", async (req, res) => {
 // Create payment intent for video download
 app.post("/purchase-video", async (req, res) => {
   try {
-    const { email, settings } = req.body;
+    const { email, settings, discountCode } = req.body;
+
+    let videoPrice = products.video.price;
+    let discount = 0;
+
+    // Apply discount if valid
+    if (discountCode && discountCodes[discountCode.toUpperCase()]) {
+      discount = discountCodes[discountCode.toUpperCase()];
+      videoPrice = Math.round(videoPrice * (1 - discount));
+    }
+
+    // If 100% discount, skip payment intent
+    if (videoPrice === 0) {
+      res.json({
+        clientSecret: null,
+        amount: 0,
+        freeWithCode: true,
+      });
+      return;
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: products.video.price,
+      amount: videoPrice,
       currency: "usd",
       metadata: {
         type: "video",
         email: email,
         displayText: settings.displayText || "",
+        discountCode: discountCode || "",
       },
       receipt_email: email,
     });
 
     res.json({
       clientSecret: paymentIntent.client_secret,
-      amount: products.video.price,
+      amount: videoPrice,
     });
   } catch (error) {
     console.error("Error creating video payment intent:", error);
@@ -178,10 +198,12 @@ app.post("/finalize-video", async (req, res) => {
   try {
     const { paymentIntentId, settings } = req.body;
 
-    // Verify payment was successful
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (paymentIntent.status !== "succeeded") {
-      return res.status(400).json({ error: "Payment not completed" });
+    // Verify payment was successful (skip if free with discount code)
+    if (paymentIntentId) {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (paymentIntent.status !== "succeeded") {
+        return res.status(400).json({ error: "Payment not completed" });
+      }
     }
 
     // Generate unique filename
