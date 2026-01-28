@@ -526,25 +526,19 @@ async function renderVideo(settings, outputPath, videoId) {
       convert.on("error", reject);
     });
 
-    console.log("Frames captured, encoding video with thumbnail...");
+    console.log("Frames captured, encoding video...");
 
     // Encode with ffmpeg (optimized for Android/iOS sharing compatibility)
-    // Attach thumbnail as poster image
     await new Promise((resolve, reject) => {
       const ffmpeg = spawn("ffmpeg", [
         "-y",
         "-framerate", String(fps),
         "-i", path.join(frameDir, "frame-%05d.png"),
-        "-i", thumbnailPath,
-        "-map", "0:v",
-        "-map", "1:v",
-        "-c:v:0", "libx264",
-        "-c:v:1", "mjpeg",
-        "-profile:v:0", "baseline",
+        "-c:v", "libx264",
+        "-profile:v", "baseline",
         "-level", "3.0",
         "-pix_fmt", "yuv420p",
         "-crf", "23",
-        "-disposition:v:1", "attached_pic",
         "-movflags", "+faststart",
         outputPath,
       ]);
