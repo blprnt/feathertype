@@ -385,12 +385,19 @@ function setup() {
     printButton.style('transform', 'translateY(0)');
   });
 
-  // "What is this?" button at bottom
+  // Bottom buttons container
+  let bottomButtons = createDiv('');
+  bottomButtons.style('position', 'fixed');
+  bottomButtons.style('bottom', '20px');
+  bottomButtons.style('left', '50%');
+  bottomButtons.style('transform', 'translateX(-50%)');
+  bottomButtons.style('display', 'flex');
+  bottomButtons.style('gap', '10px');
+  bottomButtons.style('z-index', '1000');
+
+  // "What is this?" button
   let infoButton = createButton("What is this?");
-  infoButton.style('position', 'fixed');
-  infoButton.style('bottom', '20px');
-  infoButton.style('left', '50%');
-  infoButton.style('transform', 'translateX(-50%)');
+  infoButton.parent(bottomButtons);
   infoButton.style('padding', '10px 20px');
   infoButton.style('border', 'none');
   infoButton.style('border-radius', '20px');
@@ -400,13 +407,34 @@ function setup() {
   infoButton.style('color', '#333');
   infoButton.style('cursor', 'pointer');
   infoButton.style('transition', 'all 0.2s');
-  infoButton.style('z-index', '1000');
   infoButton.mousePressed(() => showInfoModal());
   infoButton.mouseOver(() => {
     infoButton.style('background-color', 'rgba(0,0,0,0.2)');
   });
   infoButton.mouseOut(() => {
     infoButton.style('background-color', 'rgba(0,0,0,0.1)');
+  });
+
+  // "Get in touch" button
+  let contactButton = createButton("Get in touch");
+  contactButton.parent(bottomButtons);
+  contactButton.style('padding', '10px 20px');
+  contactButton.style('border', 'none');
+  contactButton.style('border-radius', '20px');
+  contactButton.style('font-size', '14px');
+  contactButton.style('font-family', 'Playfair Display, serif');
+  contactButton.style('background-color', 'rgba(0,0,0,0.1)');
+  contactButton.style('color', '#333');
+  contactButton.style('cursor', 'pointer');
+  contactButton.style('transition', 'all 0.2s');
+  contactButton.mousePressed(() => {
+    window.location.href = 'mailto:jer.thorp@hey.com';
+  });
+  contactButton.mouseOver(() => {
+    contactButton.style('background-color', 'rgba(0,0,0,0.2)');
+  });
+  contactButton.mouseOut(() => {
+    contactButton.style('background-color', 'rgba(0,0,0,0.1)');
   });
 
   // Use getBirdsFromSearch to load initial bird data based on displayText
@@ -1515,6 +1543,9 @@ function showPaymentStep() {
         <label>Card Details</label>
         <div id="card-element"></div>
         <div id="card-errors" class="error-message"></div>
+        <div style="margin-top: 8px; text-align: right;">
+          <img src="https://cdn.brandfolder.io/KGT2DTA4/at/8vbr8k4mr5xjwk4hxq4t9vs/Powered_by_Stripe_-_blurple.svg" alt="Powered by Stripe" style="height: 20px;">
+        </div>
       </div>
       <button type="submit" id="pay-submit" class="submit-button">
         <span id="pay-button-text">Pay $${(currentPurchase.totalAmount / 100).toFixed(2)}</span>
@@ -1740,6 +1771,9 @@ function startVideoPurchase() {
           <label>Card Details</label>
           <div id="card-element"></div>
           <div id="card-errors" class="error-message"></div>
+          <div style="margin-top: 8px; text-align: right;">
+            <img src="https://cdn.brandfolder.io/KGT2DTA4/at/8vbr8k4mr5xjwk4hxq4t9vs/Powered_by_Stripe_-_blurple.svg" alt="Powered by Stripe" style="height: 20px;">
+          </div>
         </div>
       </div>
       <button type="submit" id="video-submit" class="submit-button">
