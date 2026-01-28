@@ -86,7 +86,13 @@ let fscale;
 let myFont;
 
 // Text to display
-let displayText = "RESIST";
+// Default phrases to randomly choose from
+const defaultPhrases = [
+  "FLOCK TOGETHER",
+  "LOVE IS A THING WITH FEATHERS",
+  "THEY AIN'T GONNA COUNT THEMSELVES"
+];
+let displayText = defaultPhrases[Math.floor(Math.random() * defaultPhrases.length)];
 
 // Letter positions and feather assignments
 let letterData = [];
@@ -186,33 +192,38 @@ function setup() {
   select('canvas').style('max-width', '100%');
   select('canvas').style('height', 'auto');
   select('canvas').style('box-shadow', '0 4px 20px rgba(0,0,0,0.1)');
-  select('canvas').style('margin', '80px auto 0 auto'); // Top margin for controls
+  select('canvas').style('margin', '120px auto 20px auto'); // Top margin for controls (extra on mobile)
+  select('canvas').style('padding', '0 10px');
 
-  // Create container for controls - horizontal layout at top
+  // Create container for controls - responsive layout
   let controlsDiv = createDiv('');
   controlsDiv.style('position', 'fixed');
   controlsDiv.style('top', '0');
   controlsDiv.style('left', '0');
   controlsDiv.style('right', '0');
   controlsDiv.style('display', 'flex');
+  controlsDiv.style('flex-wrap', 'wrap');
   controlsDiv.style('align-items', 'center');
-  controlsDiv.style('gap', '10px');
-  controlsDiv.style('padding', '15px 20px');
+  controlsDiv.style('gap', '8px');
+  controlsDiv.style('padding', '10px 15px');
   controlsDiv.style('background-color', '#f5f0e6'); // Always beige
   controlsDiv.style('border-bottom', '2px solid #ddd');
   controlsDiv.style('z-index', '1000');
   controlsDiv.style('box-shadow', '0 2px 4px rgba(0,0,0,0.05)');
+  controlsDiv.id('controls');
 
   // Input for custom text
   let textInput = createInput(displayText);
   textInput.parent(controlsDiv);
-  textInput.size(300);
-  textInput.style('padding', '12px');
+  textInput.style('padding', '10px');
   textInput.style('border', '2px solid #333');
   textInput.style('border-radius', '8px');
   textInput.style('font-size', '16px');
   textInput.style('background-color', '#fff');
   textInput.style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)');
+  textInput.style('min-width', '150px');
+  textInput.style('flex', '1 1 200px');
+  textInput.style('max-width', '300px');
   
   // Function to update text and fetch new birds
   const updateText = () => {
@@ -241,17 +252,16 @@ function setup() {
   // GO button
   let goButton = createButton("GO");
   goButton.parent(controlsDiv);
-  goButton.style('padding', '12px 20px');
+  goButton.style('padding', '10px 16px');
   goButton.style('border', '2px solid #333');
   goButton.style('border-radius', '8px');
-  goButton.style('font-size', '16px');
+  goButton.style('font-size', '14px');
   goButton.style('background-color', '#333');
   goButton.style('color', '#fff');
   goButton.style('cursor', 'pointer');
   goButton.style('font-weight', '600');
   goButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
   goButton.style('transition', 'all 0.2s');
-  goButton.style('flex-shrink', '0');
   goButton.mousePressed(updateText);
   goButton.mouseOver(() => {
     goButton.style('background-color', '#555');
@@ -266,22 +276,21 @@ function setup() {
 
   let regenerateButton = createButton("↻");
   regenerateButton.parent(controlsDiv);
-  regenerateButton.style('padding', '12px');
+  regenerateButton.style('padding', '8px');
   regenerateButton.style('border', '2px solid #333');
   regenerateButton.style('border-radius', '8px');
-  regenerateButton.style('font-size', '24px');
+  regenerateButton.style('font-size', '20px');
   regenerateButton.style('background-color', '#333');
   regenerateButton.style('color', '#fff');
   regenerateButton.style('cursor', 'pointer');
   regenerateButton.style('font-weight', '600');
   regenerateButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
   regenerateButton.style('transition', 'all 0.2s');
-  regenerateButton.style('width', '50px');
-  regenerateButton.style('height', '50px');
+  regenerateButton.style('width', '42px');
+  regenerateButton.style('height', '42px');
   regenerateButton.style('display', 'flex');
   regenerateButton.style('align-items', 'center');
   regenerateButton.style('justify-content', 'center');
-  regenerateButton.style('flex-shrink', '0');
   regenerateButton.mousePressed(() => {
     // Pick new random background color for canvas only
     let bgArray = random(backgroundColors);
@@ -306,57 +315,26 @@ function setup() {
     regenerateButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
   });
 
-  let saveButton = createButton("⬇");
-  saveButton.parent(controlsDiv);
-  saveButton.style('padding', '12px');
-  saveButton.style('border', '2px solid #333');
-  saveButton.style('border-radius', '8px');
-  saveButton.style('font-size', '24px');
-  saveButton.style('background-color', '#333');
-  saveButton.style('color', '#fff');
-  saveButton.style('cursor', 'pointer');
-  saveButton.style('font-weight', '600');
-  saveButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
-  saveButton.style('transition', 'all 0.2s');
-  saveButton.style('width', '50px');
-  saveButton.style('height', '50px');
-  saveButton.style('display', 'flex');
-  saveButton.style('align-items', 'center');
-  saveButton.style('justify-content', 'center');
-  saveButton.style('flex-shrink', '0');
-  saveButton.mousePressed(() => {
-    save("feather-text.png");
-  });
-  saveButton.mouseOver(() => {
-    saveButton.style('background-color', '#555');
-    saveButton.style('transform', 'translateY(-1px)');
-    saveButton.style('box-shadow', '0 4px 6px rgba(0,0,0,0.2)');
-  });
-  saveButton.mouseOut(() => {
-    saveButton.style('background-color', '#333');
-    saveButton.style('transform', 'translateY(0)');
-    saveButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
-  });
-
-  // Spacer to push purchase buttons to the right
+  // Spacer to push purchase buttons to the right (flexible)
   let spacer = createDiv('');
   spacer.parent(controlsDiv);
-  spacer.style('flex-grow', '1');
+  spacer.style('flex', '1 1 auto');
+  spacer.style('min-width', '10px');
 
   // Download High-Res button (free)
   let downloadButton = createButton("Download HD");
   downloadButton.parent(controlsDiv);
-  downloadButton.style('padding', '12px 16px');
+  downloadButton.style('padding', '10px 14px');
   downloadButton.style('border', '2px solid #2563eb');
   downloadButton.style('border-radius', '8px');
-  downloadButton.style('font-size', '14px');
+  downloadButton.style('font-size', '13px');
   downloadButton.style('background-color', '#2563eb');
   downloadButton.style('color', '#fff');
   downloadButton.style('cursor', 'pointer');
   downloadButton.style('font-weight', '600');
   downloadButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
   downloadButton.style('transition', 'all 0.2s');
-  downloadButton.style('flex-shrink', '0');
+  downloadButton.style('white-space', 'nowrap');
   downloadButton.mousePressed(() => startDigitalDownload());
   downloadButton.mouseOver(() => {
     downloadButton.style('background-color', '#1d4ed8');
@@ -368,19 +346,19 @@ function setup() {
   });
 
   // Order Print button ($25+)
-  let printButton = createButton("Order Print ($25+)");
+  let printButton = createButton("Order Print");
   printButton.parent(controlsDiv);
-  printButton.style('padding', '12px 16px');
+  printButton.style('padding', '10px 14px');
   printButton.style('border', '2px solid #059669');
   printButton.style('border-radius', '8px');
-  printButton.style('font-size', '14px');
+  printButton.style('font-size', '13px');
   printButton.style('background-color', '#059669');
   printButton.style('color', '#fff');
   printButton.style('cursor', 'pointer');
   printButton.style('font-weight', '600');
   printButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
   printButton.style('transition', 'all 0.2s');
-  printButton.style('flex-shrink', '0');
+  printButton.style('white-space', 'nowrap');
   printButton.mousePressed(() => startPrintPurchase());
   printButton.mouseOver(() => {
     printButton.style('background-color', '#047857');
@@ -1072,10 +1050,10 @@ function startDigitalDownload() {
     <h2>Download High-Resolution Image</h2>
     <p>Your high-res image is free! If you'd like to support this project, consider sending a tip.</p>
     <div class="venmo-tip-box">
-      <div class="venmo-info">
+      <a href="https://venmo.com/u/Jer-Thorp" target="_blank" class="venmo-link">
         <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
         <span class="venmo-handle">@Jer-Thorp</span>
-      </div>
+      </a>
       <p class="venmo-note">Tip any amount you'd like!</p>
     </div>
     <button onclick="handleDigitalDownload()" id="download-button" class="submit-button">
@@ -1117,10 +1095,10 @@ async function handleDigitalDownload() {
       <a href="${data.downloadUrl}" download class="download-link">Download Image</a>
       <div class="venmo-tip-box" style="margin-top: 20px;">
         <p style="margin: 0 0 8px 0; font-size: 14px;">Enjoying FeatherType? Consider a tip!</p>
-        <div class="venmo-info">
+        <a href="https://venmo.com/u/Jer-Thorp" target="_blank" class="venmo-link">
           <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
           <span class="venmo-handle">@Jer-Thorp</span>
-        </div>
+        </a>
       </div>
       <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
     `;

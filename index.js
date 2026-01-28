@@ -155,9 +155,14 @@ app.post("/get-quote", async (req, res) => {
     let productPrice = product.basePrice;
 
     // Apply discount if valid
+    let discount = 0;
     if (discountCode && discountCodes[discountCode.toUpperCase()]) {
-      const discount = discountCodes[discountCode.toUpperCase()];
+      discount = discountCodes[discountCode.toUpperCase()];
       productPrice = Math.round(productPrice * (1 - discount));
+      // 100% discount also means free shipping
+      if (discount >= 1.0) {
+        shippingCost = 0;
+      }
     }
 
     const totalAmount = productPrice + shippingCost;
@@ -320,11 +325,12 @@ async function getProdigiShippingQuote(address, sku) {
           {
             sku: sku,
             copies: 1,
+            sizing: "fillPrintArea",
             assets: [
               {
                 printArea: "default",
-                // Use Prodigi's sample image from their docs
-                url: "https://www.prodigi.com/img/products/product-image-frame-702x702.png",
+                // Use dummyimage.com - reliable placeholder service
+                url: "https://dummyimage.com/4800x4800/cccccc/000000.png",
               },
             ],
           },
@@ -335,8 +341,8 @@ async function getProdigiShippingQuote(address, sku) {
     const data = await response.json();
 
     if (!response.ok || data.outcome !== "Created") {
-      console.error("Prodigi Quote API error:", data);
-      console.log("Using fallback shipping estimate");
+      console.error("Prodigi Quote API error:", JSON.stringify(data, null, 2));
+      console.log("Using fallback shipping estimate for", address.country, sku);
       // Fall back to estimates if API fails
       return getFallbackShippingEstimate(address, sku);
     }
