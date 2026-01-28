@@ -29,6 +29,12 @@ const products = {
     width: 4800,
     height: 4800,
   },
+  video: {
+    name: "Animated Video (MP4)",
+    price: 10.00,
+    width: 1080,
+    height: 1080,
+  },
   "print-12x12": {
     name: "12x12 Print",
     basePrice: 25.00,
@@ -352,6 +358,30 @@ function setup() {
   downloadButton.mouseOut(() => {
     downloadButton.style('background-color', '#2563eb');
     downloadButton.style('transform', 'translateY(0)');
+  });
+
+  // Download Video button ($10)
+  let videoButton = createButton("Video $10");
+  videoButton.parent(controlsDiv);
+  videoButton.style('padding', '10px 14px');
+  videoButton.style('border', '2px solid #7c3aed');
+  videoButton.style('border-radius', '8px');
+  videoButton.style('font-size', '13px');
+  videoButton.style('background-color', '#7c3aed');
+  videoButton.style('color', '#fff');
+  videoButton.style('cursor', 'pointer');
+  videoButton.style('font-weight', '600');
+  videoButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  videoButton.style('transition', 'all 0.2s');
+  videoButton.style('white-space', 'nowrap');
+  videoButton.mousePressed(() => startVideoPurchase());
+  videoButton.mouseOver(() => {
+    videoButton.style('background-color', '#6d28d9');
+    videoButton.style('transform', 'translateY(-1px)');
+  });
+  videoButton.mouseOut(() => {
+    videoButton.style('background-color', '#7c3aed');
+    videoButton.style('transform', 'translateY(0)');
   });
 
   // Order Print button ($25+)
@@ -1430,18 +1460,165 @@ async function finalizePrintOrder(paymentIntentId) {
 function showInfoModal() {
   const modalContent = `
     <h2>What is FeatherType?</h2>
-    <p>FeatherType generates unique text art using the colors of bird feathers. Each letter is paired with a bird whose name starts with that letter, and the feather above is drawn using that bird's actual plumage colors.</p>
+    <p>FeatherType generates unique text art using the colors of bird feathers. Each letter is paired with a bird whose name starts with that letter.</p>
+    <p>The colors for each feather are extracted from bird photographs on Wikipedia, capturing the actual plumage palette of each species.</p>
     <p>Type any word or phrase, and watch as birds from around the world come together to spell it out.</p>
-    <p>Created by <a href="https://jerthorp.com" target="_blank" style="color: #2563eb;">Jer Thorp</a></p>
+    <p><a href="https://www.jerthorp.me/post/of-a-feather" target="_blank" style="color: #2563eb;">Read more about the project</a></p>
+    <p style="margin-top: 10px;">Created by <a href="https://jerthorp.com" target="_blank" style="color: #2563eb;">Jer Thorp</a></p>
     <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
   `;
 
   createModal(modalContent);
 }
 
+// Start video purchase
+function startVideoPurchase() {
+  currentPurchase.type = 'video';
+
+  const modalContent = `
+    <h2>Download Animated Video</h2>
+    <p class="modal-price">$10.00</p>
+    <p>Get a 5-second animated MP4 video (1080x1080) of your feather text design.</p>
+    <form id="video-form" onsubmit="handleVideoSubmit(event)">
+      <div class="form-group">
+        <label for="video-email">Email Address</label>
+        <input type="email" id="video-email" name="email" required placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>Card Details</label>
+        <div id="card-element"></div>
+        <div id="card-errors" class="error-message"></div>
+      </div>
+      <button type="submit" id="video-submit" class="submit-button">
+        <span id="video-button-text">Pay $10.00</span>
+        <span id="video-spinner" class="spinner hidden"></span>
+      </button>
+    </form>
+  `;
+
+  createModal(modalContent);
+
+  // Initialize Stripe Elements
+  initStripe();
+  if (stripe) {
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+      style: {
+        base: {
+          fontSize: '16px',
+          color: '#333',
+          '::placeholder': { color: '#aab7c4' },
+        },
+      },
+    });
+    cardElement.mount('#card-element');
+
+    cardElement.on('change', (event) => {
+      const displayError = document.getElementById('card-errors');
+      displayError.textContent = event.error ? event.error.message : '';
+    });
+  }
+}
+
+// Handle video form submission
+async function handleVideoSubmit(event) {
+  event.preventDefault();
+
+  const submitButton = document.getElementById('video-submit');
+  const buttonText = document.getElementById('video-button-text');
+  const spinner = document.getElementById('video-spinner');
+
+  submitButton.disabled = true;
+  buttonText.classList.add('hidden');
+  spinner.classList.remove('hidden');
+
+  const email = document.getElementById('video-email').value;
+
+  try {
+    // Create payment intent
+    const response = await fetch('/purchase-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        settings: getCurrentSettings(),
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    // Confirm payment
+    const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
+      payment_method: { card: cardElement },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (paymentIntent.status === 'succeeded') {
+      // Show rendering message
+      const modalContent = document.querySelector('.modal-content');
+      modalContent.innerHTML = `
+        <h2>Rendering Your Video...</h2>
+        <p>This may take a minute. Please wait.</p>
+        <div style="display: flex; justify-content: center; margin: 30px 0;">
+          <span class="spinner" style="width: 40px; height: 40px; border-width: 3px;"></span>
+        </div>
+      `;
+
+      // Finalize video
+      await finalizeVideoOrder(paymentIntent.id, email);
+    }
+  } catch (error) {
+    const errorDiv = document.getElementById('card-errors');
+    if (errorDiv) errorDiv.textContent = error.message;
+    submitButton.disabled = false;
+    buttonText.classList.remove('hidden');
+    spinner.classList.add('hidden');
+  }
+}
+
+// Finalize video order
+async function finalizeVideoOrder(paymentIntentId, email) {
+  try {
+    const response = await fetch('/finalize-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paymentIntentId: paymentIntentId,
+        settings: getCurrentSettings(),
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    // Show success message with download link
+    const modalContent = document.querySelector('.modal-content');
+    modalContent.innerHTML = `
+      <h2>Your Video is Ready!</h2>
+      <p>Thanks for your purchase!</p>
+      <a href="${data.downloadUrl}" download class="download-link">Download Video</a>
+      <p class="modal-note" style="margin-top: 15px;">A receipt has been sent to ${email}</p>
+      <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
+    `;
+  } catch (error) {
+    const modalContent = document.querySelector('.modal-content');
+    modalContent.innerHTML = `
+      <h2>Error</h2>
+      <p>There was an error rendering your video: ${error.message}</p>
+      <p>Your payment was processed. Please contact support.</p>
+      <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
+    `;
+  }
+}
+
 // Make functions available globally for onclick handlers
 window.handleDigitalDownload = handleDigitalDownload;
 window.handleAddressSubmit = handleAddressSubmit;
 window.handlePrintPayment = handlePrintPayment;
+window.handleVideoSubmit = handleVideoSubmit;
 window.closeModal = closeModal;
 window.showInfoModal = showInfoModal;
