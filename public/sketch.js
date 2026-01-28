@@ -261,9 +261,12 @@ function setup() {
     let bgArray = random(backgroundColors);
     bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
 
-    // Reset state - don't start animation until birds are loaded
+    // Reset all state - don't start animation until new birds are loaded
     letterData = [];
     isAnimating = false;
+    birds = undefined;
+    colorCount = -1; // Use -1 to indicate loading state
+    toLoad = 0;
 
     // Fetch new birds for the new text
     getBirdsFromSearch(displayText);
@@ -326,9 +329,12 @@ function setup() {
     let bgArray = random(backgroundColors);
     bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
 
-    // Reset state - don't start animation until birds are loaded
+    // Reset all state - don't start animation until new birds are loaded
     letterData = [];
     isAnimating = false;
+    birds = undefined;
+    colorCount = -1; // Use -1 to indicate loading state
+    toLoad = 0;
 
     // Fetch new birds to get different random selections
     getBirdsFromSearch(displayText);
