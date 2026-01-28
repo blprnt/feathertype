@@ -1035,7 +1035,7 @@ function getBirdsFromSearch(_query) {
   console.log(`Fetching birds starting with: ${uniqueLetters}`);
 
   // Use the startsWith endpoint with perToken=3 to get a few random birds per letter
-  const searchUrl = colorserver + "search?query=startsWith:" + uniqueLetters + "&perToken=3&limit=100";
+  const searchUrl = colorserver + "search?query=startsWith:" + uniqueLetters + "&perToken=3&limit=200";
   console.log("Fetching from:", searchUrl);
 
   fetch(searchUrl)
