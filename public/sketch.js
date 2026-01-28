@@ -1298,7 +1298,7 @@ function startPrintPurchase() {
     <h2>Order a Print</h2>
     <form id="address-form" onsubmit="handleAddressSubmit(event)">
       <div class="form-group">
-        <label>Select Size & Style</label>
+        <label>Select Size & Style <span class="info-icon" onclick="showPrintInfo()" title="Print info">ⓘ</span></label>
         <div class="product-options">
           <label class="product-option">
             <input type="radio" name="productType" value="print-12x12" checked>
@@ -1329,6 +1329,16 @@ function startPrintPurchase() {
             </span>
           </label>
         </div>
+      </div>
+      <div class="form-group hidden" id="frame-color-group">
+        <label for="frame-color">Frame Color</label>
+        <select id="frame-color" name="frameColor">
+          <option value="black">Black</option>
+          <option value="white">White</option>
+          <option value="brown">Brown</option>
+          <option value="darkgrey">Dark Grey</option>
+          <option value="lightgrey">Light Grey</option>
+        </select>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1381,6 +1391,23 @@ function startPrintPurchase() {
   `;
 
   createModal(modalContent);
+
+  // Show/hide frame color based on product selection
+  const productOptions = document.querySelectorAll('input[name="productType"]');
+  const frameColorGroup = document.getElementById('frame-color-group');
+
+  const updateFrameColorVisibility = () => {
+    const selected = document.querySelector('input[name="productType"]:checked').value;
+    if (selected.includes('framed')) {
+      frameColorGroup.classList.remove('hidden');
+    } else {
+      frameColorGroup.classList.add('hidden');
+    }
+  };
+
+  productOptions.forEach(option => {
+    option.addEventListener('change', updateFrameColorVisibility);
+  });
 }
 
 // Handle address form submission - get shipping quote
@@ -1396,6 +1423,7 @@ async function handleAddressSubmit(event) {
   spinner.classList.remove('hidden');
 
   const productType = document.querySelector('input[name="productType"]:checked').value;
+  const frameColor = document.getElementById('frame-color').value;
 
   const address = {
     name: document.getElementById('name').value,
@@ -1418,6 +1446,7 @@ async function handleAddressSubmit(event) {
         email: email,
         discountCode: discountCode,
         productType: productType,
+        frameColor: frameColor,
         settings: getCurrentSettings(),
       }),
     });
@@ -1430,6 +1459,7 @@ async function handleAddressSubmit(event) {
     currentPurchase.email = email;
     currentPurchase.address = address;
     currentPurchase.productType = productType;
+    currentPurchase.frameColor = frameColor;
     currentPurchase.productName = data.productName;
     currentPurchase.productPrice = data.productPrice;
     currentPurchase.shippingCost = data.shippingCost;
@@ -1546,6 +1576,7 @@ async function finalizePrintOrder(paymentIntentId) {
         address: currentPurchase.address,
         email: currentPurchase.email,
         productType: currentPurchase.productType,
+        frameColor: currentPurchase.frameColor,
       }),
     });
 
@@ -1581,6 +1612,57 @@ function showInfoModal() {
 
   createModal(modalContent);
 }
+
+// Show print info popup
+function showPrintInfo() {
+  event.stopPropagation();
+
+  // Remove existing popup if any
+  let existing = document.getElementById('print-info-popup');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  let popup = document.createElement('div');
+  popup.id = 'print-info-popup';
+  popup.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    z-index: 3000;
+    max-width: 350px;
+    font-size: 14px;
+    line-height: 1.5;
+  `;
+  popup.innerHTML = `
+    <p style="margin: 0 0 12px 0;"><strong>About Our Prints</strong></p>
+    <p style="margin: 0 0 12px 0;">Art prints are on Enhanced Matte Art paper, 200gsm, and are printed with archival quality inks.</p>
+    <p style="margin: 0 0 12px 0;">Unframed prints ship locally to the US, Canada, UK, EU and Australia!</p>
+    <p style="margin: 0;">Framed prints ship locally to the US and the UK.</p>
+    <button onclick="document.getElementById('print-info-popup').remove()" style="margin-top: 15px; padding: 8px 16px; border: none; background: #333; color: white; border-radius: 6px; cursor: pointer;">Got it</button>
+  `;
+
+  document.body.appendChild(popup);
+
+  // Close on click outside
+  setTimeout(() => {
+    document.addEventListener('click', function closePopup(e) {
+      if (!popup.contains(e.target)) {
+        popup.remove();
+        document.removeEventListener('click', closePopup);
+      }
+    });
+  }, 100);
+}
+
+// Make showPrintInfo available globally
+window.showPrintInfo = showPrintInfo;
 
 // Start video purchase
 function startVideoPurchase() {

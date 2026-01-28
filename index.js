@@ -300,7 +300,7 @@ app.post("/get-quote", async (req, res) => {
 // Finalize print order - render image and submit to Prodigi
 app.post("/finalize-order", async (req, res) => {
   try {
-    const { paymentIntentId, settings, address, email, productType } = req.body;
+    const { paymentIntentId, settings, address, email, productType, frameColor } = req.body;
 
     const product = products[productType];
     if (!product || productType === 'digital') {
@@ -320,12 +320,14 @@ app.post("/finalize-order", async (req, res) => {
     // Render print-resolution image with Puppeteer
     await renderImage(settings, product.width, product.height, outputPath);
 
-    // Submit order to Prodigi
+    // Submit order to Prodigi (include frame color for framed products)
+    const isFramed = productType.includes('framed');
     const prodigiOrder = await submitProdigiOrder(
       `${BASE_URL}/prints/${filename}`,
       address,
       email,
-      product.sku
+      product.sku,
+      isFramed ? frameColor : null
     );
 
     res.json({
@@ -612,7 +614,27 @@ function getFallbackShippingEstimate(address, sku) {
 }
 
 // Submit order to Prodigi
-async function submitProdigiOrder(imageUrl, address, email, sku) {
+async function submitProdigiOrder(imageUrl, address, email, sku, frameColor = null) {
+  // Build item object
+  const item = {
+    sku: sku,
+    copies: 1,
+    sizing: "fillPrintArea",
+    assets: [
+      {
+        printArea: "default",
+        url: imageUrl,
+      },
+    ],
+  };
+
+  // Add frame color attribute for framed products
+  if (frameColor) {
+    item.attributes = {
+      color: frameColor,
+    };
+  }
+
   const response = await fetch(`${PRODIGI_API_URL}/orders`, {
     method: "POST",
     headers: {
@@ -632,19 +654,7 @@ async function submitProdigiOrder(imageUrl, address, email, sku) {
           stateOrCounty: address.state,
         },
       },
-      items: [
-        {
-          sku: sku,
-          copies: 1,
-          sizing: "fillPrintArea",
-          assets: [
-            {
-              printArea: "default",
-              url: imageUrl,
-            },
-          ],
-        },
-      ],
+      items: [item],
     }),
   });
 
