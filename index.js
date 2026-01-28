@@ -320,8 +320,8 @@ async function getProdigiShippingQuote(address, sku) {
             assets: [
               {
                 printArea: "default",
-                // Use a reliable public placeholder image
-                url: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png",
+                // Use Prodigi's sample image from their docs
+                url: "https://www.prodigi.com/img/products/product-image-frame-702x702.png",
               },
             ],
           },
@@ -333,6 +333,7 @@ async function getProdigiShippingQuote(address, sku) {
 
     if (!response.ok || data.outcome !== "Created") {
       console.error("Prodigi Quote API error:", data);
+      console.log("Using fallback shipping estimate");
       // Fall back to estimates if API fails
       return getFallbackShippingEstimate(address, sku);
     }
