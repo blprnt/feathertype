@@ -981,9 +981,9 @@ function getBirdsFromSearch(_query) {
 
   console.log(`Fetching birds starting with: ${uniqueLetters}`);
 
-  // Use the startsWith endpoint with perToken=1 to get one random bird per letter
+  // Use the startsWith endpoint with perToken=3 to get a few random birds per letter
   loadJSON(
-    colorserver + "search?query=startsWith:" + uniqueLetters + "&perToken=1",
+    colorserver + "search?query=startsWith:" + uniqueLetters + "&perToken=3",
     onSearch
   );
 }
