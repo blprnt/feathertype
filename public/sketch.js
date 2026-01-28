@@ -214,6 +214,25 @@ function setup() {
   select('body').style('background-color', '#f5f0e6'); // Always beige
   select('body').style('font-family', 'system-ui, -apple-system, sans-serif');
 
+  // Add responsive CSS for bottom buttons
+  let responsiveStyle = document.createElement('style');
+  responsiveStyle.textContent = `
+    #bottom-buttons {
+      flex-direction: row;
+    }
+    @media (max-width: 600px) {
+      #bottom-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      #bottom-buttons > * {
+        font-size: 12px !important;
+        padding: 8px 14px !important;
+      }
+    }
+  `;
+  document.head.appendChild(responsiveStyle);
+
   // Position canvas to scale and center, with margin for top controls
   select('canvas').style('display', 'block');
   select('canvas').style('max-width', '100%');
@@ -387,13 +406,17 @@ function setup() {
 
   // Bottom buttons container
   let bottomButtons = createDiv('');
+  bottomButtons.id('bottom-buttons');
   bottomButtons.style('position', 'fixed');
   bottomButtons.style('bottom', '20px');
   bottomButtons.style('left', '50%');
   bottomButtons.style('transform', 'translateX(-50%)');
   bottomButtons.style('display', 'flex');
-  bottomButtons.style('gap', '10px');
+  bottomButtons.style('flex-wrap', 'wrap');
+  bottomButtons.style('justify-content', 'center');
+  bottomButtons.style('gap', '8px');
   bottomButtons.style('z-index', '1000');
+  bottomButtons.style('max-width', '90vw');
 
   // "What is this?" button
   let infoButton = createButton("What is this?");
