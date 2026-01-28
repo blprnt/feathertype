@@ -99,9 +99,7 @@ nunjucks.configure("public", {
 
 // Main route
 app.get(`/`, (req, res) => {
-  res.render(`index.html`, {
-    node: execSync(`node --version`).toString(),
-    python: execSync(`python3 --version`).toString(),
+  res.render(`index.njk`, {
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
   });
 });
@@ -168,8 +166,7 @@ app.post("/get-quote", async (req, res) => {
         type: "print",
         productType: productType,
         email: email,
-        address: JSON.stringify(address),
-        settings: JSON.stringify(settings),
+        displayText: settings.displayText || "",
       },
       receipt_email: email,
     });
