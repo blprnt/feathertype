@@ -1,0 +1,1416 @@
+/*
+
+Feather Text Generator - Creates text with bird feathers above each letter
+
+*/
+
+// Server mode detection
+let serverMode = false;
+let serverParams = null;
+let serverLetterData = null; // Pre-built letter data from client
+
+// Global Variables
+let birds;
+let toLoad;
+let codeMap = {};
+
+// Stripe instance (initialized when needed)
+let stripe = null;
+let cardElement = null;
+
+// Product configuration
+const products = {
+  digital: {
+    name: "High-Res Digital Download",
+    price: 5.00,
+    width: 4800,
+    height: 4800,
+  },
+  "print-12x12": {
+    name: "12x12 Print",
+    basePrice: 25.00,
+  },
+  "print-12x12-framed": {
+    name: "12x12 Framed Print",
+    basePrice: 65.00,
+  },
+  "print-16x16": {
+    name: "16x16 Print",
+    basePrice: 35.00,
+  },
+  "print-16x16-framed": {
+    name: "16x16 Framed Print",
+    basePrice: 85.00,
+  },
+};
+
+// Current purchase state
+let currentPurchase = {
+  type: null,
+  clientSecret: null,
+  email: null,
+  address: null,
+  discountCode: null,
+  productPrice: 0,
+  shippingCost: 0,
+  totalAmount: 0,
+};
+
+// Colors
+let colorMap = {};
+let colorCount = 0;
+let colorserver = "https://birdstocolors.binstobins.online/";
+
+// Array of suitable background colors - varied subtle shades
+const backgroundColors = [
+  [245, 240, 230], // warm beige
+  [240, 235, 225], // cream
+  [235, 240, 235], // pale sage green
+  [240, 235, 240], // soft lavender
+  [235, 235, 240], // light periwinkle
+  [240, 240, 235], // ivory
+  [245, 235, 235], // blush pink
+  [235, 240, 240], // powder blue
+  [238, 238, 238], // soft gray
+  [240, 238, 235], // warm white
+  [235, 242, 235], // mint cream
+  [242, 238, 242], // pale lilac
+  [238, 235, 230], // taupe
+  [230, 235, 240], // light steel blue
+  [245, 240, 240], // pearl
+];
+
+let bcolor;
+let fscale;
+
+let myFont;
+
+// Text to display
+let displayText = "RESIST";
+
+// Letter positions and feather assignments
+let letterData = [];
+
+// Animation variables
+let animationStartTime = 0;
+let animationDuration = 5000; // Increased to 5 seconds to account for feather overlap
+let isAnimating = false;
+
+function preload() {
+  myFont = loadFont("PlayfairDisplay-VariableFont_wght.ttf");
+
+  // Check for server mode
+  if (window.SERVER_PARAMS) {
+    serverMode = true;
+    serverParams = window.SERVER_PARAMS;
+  }
+}
+
+function setup() {
+  // Server mode: use provided dimensions, skip UI
+  if (serverMode && serverParams) {
+    // Calculate scale factor based on desired output vs base canvas
+    const baseSize = 1200;
+    const outputSize = serverParams.width || 4800;
+    const scaleFactor = outputSize / baseSize;
+
+    // Use base canvas size with high pixel density for crisp output
+    createCanvas(baseSize, baseSize);
+    pixelDensity(scaleFactor);
+    textFont(myFont);
+
+    // Use settings from server params
+    if (serverParams.settings) {
+      displayText = serverParams.settings.displayText || displayText;
+      if (serverParams.settings.backgroundColor) {
+        let bg = serverParams.settings.backgroundColor;
+        bcolor = color(bg[0], bg[1], bg[2]);
+      } else {
+        let bgArray = random(backgroundColors);
+        bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
+      }
+
+      // Load bird colors from settings
+      if (serverParams.settings.birdColors) {
+        colorMap = serverParams.settings.birdColors;
+      }
+
+      // Reconstruct letter data from settings
+      if (serverParams.settings.letterData && serverParams.settings.letterData.length > 0) {
+        serverLetterData = serverParams.settings.letterData;
+      }
+    } else {
+      let bgArray = random(backgroundColors);
+      bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
+    }
+
+    fscale = 2.0;
+    background(bcolor);
+
+    // If we have pre-built letter data, use it directly
+    if (serverLetterData) {
+      setupLetterPositionsFromData(serverLetterData);
+      // Set birds as loaded so draw() proceeds
+      birds = [];
+      toLoad = 0;
+      colorCount = 0;
+    } else {
+      // Fallback: fetch birds (won't match client)
+      getBirdsFromSearch(displayText);
+    }
+    return;
+  }
+
+  // Normal client mode
+  // Create a large square canvas that can hold all content
+  // We'll position it to show only what fits in the window
+  createCanvas(1200, 1200);
+  pixelDensity(4);
+  textFont(myFont);
+
+  // Pick random background color FIRST
+  let bgArray = random(backgroundColors);
+  bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
+  fscale = 2.0; // Further increased to ensure feathers fully render
+  background(bcolor);
+
+  // Style the page and canvas container - keep HTML background beige
+  select('body').style('margin', '0');
+  select('body').style('padding', '0');
+  select('body').style('overflow', 'auto');
+  select('body').style('background-color', '#f5f0e6'); // Always beige
+  select('body').style('font-family', 'system-ui, -apple-system, sans-serif');
+
+  // Position canvas to scale and center, with margin for top controls
+  select('canvas').style('display', 'block');
+  select('canvas').style('max-width', '100%');
+  select('canvas').style('height', 'auto');
+  select('canvas').style('box-shadow', '0 4px 20px rgba(0,0,0,0.1)');
+  select('canvas').style('margin', '80px auto 0 auto'); // Top margin for controls
+
+  // Create container for controls - horizontal layout at top
+  let controlsDiv = createDiv('');
+  controlsDiv.style('position', 'fixed');
+  controlsDiv.style('top', '0');
+  controlsDiv.style('left', '0');
+  controlsDiv.style('right', '0');
+  controlsDiv.style('display', 'flex');
+  controlsDiv.style('align-items', 'center');
+  controlsDiv.style('gap', '10px');
+  controlsDiv.style('padding', '15px 20px');
+  controlsDiv.style('background-color', '#f5f0e6'); // Always beige
+  controlsDiv.style('border-bottom', '2px solid #ddd');
+  controlsDiv.style('z-index', '1000');
+  controlsDiv.style('box-shadow', '0 2px 4px rgba(0,0,0,0.05)');
+
+  // Input for custom text
+  let textInput = createInput(displayText);
+  textInput.parent(controlsDiv);
+  textInput.size(300);
+  textInput.style('padding', '12px');
+  textInput.style('border', '2px solid #333');
+  textInput.style('border-radius', '8px');
+  textInput.style('font-size', '16px');
+  textInput.style('background-color', '#fff');
+  textInput.style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)');
+  
+  // Function to update text and fetch new birds
+  const updateText = () => {
+    displayText = textInput.value().toUpperCase();
+    
+    // Pick new random background color for canvas only
+    let bgArray = random(backgroundColors);
+    bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
+    
+    // Fetch new birds for the new text
+    getBirdsFromSearch(displayText);
+    
+    // Note: setupLetterPositions() will be called in draw() once birds are loaded
+    animationStartTime = millis();
+    isAnimating = true;
+    loop();
+  };
+  
+  // Only update on Enter key press
+  textInput.elt.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      updateText();
+    }
+  });
+
+  // GO button
+  let goButton = createButton("GO");
+  goButton.parent(controlsDiv);
+  goButton.style('padding', '12px 20px');
+  goButton.style('border', '2px solid #333');
+  goButton.style('border-radius', '8px');
+  goButton.style('font-size', '16px');
+  goButton.style('background-color', '#333');
+  goButton.style('color', '#fff');
+  goButton.style('cursor', 'pointer');
+  goButton.style('font-weight', '600');
+  goButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  goButton.style('transition', 'all 0.2s');
+  goButton.style('flex-shrink', '0');
+  goButton.mousePressed(updateText);
+  goButton.mouseOver(() => {
+    goButton.style('background-color', '#555');
+    goButton.style('transform', 'translateY(-1px)');
+    goButton.style('box-shadow', '0 4px 6px rgba(0,0,0,0.2)');
+  });
+  goButton.mouseOut(() => {
+    goButton.style('background-color', '#333');
+    goButton.style('transform', 'translateY(0)');
+    goButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  });
+
+  let regenerateButton = createButton("↻");
+  regenerateButton.parent(controlsDiv);
+  regenerateButton.style('padding', '12px');
+  regenerateButton.style('border', '2px solid #333');
+  regenerateButton.style('border-radius', '8px');
+  regenerateButton.style('font-size', '24px');
+  regenerateButton.style('background-color', '#333');
+  regenerateButton.style('color', '#fff');
+  regenerateButton.style('cursor', 'pointer');
+  regenerateButton.style('font-weight', '600');
+  regenerateButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  regenerateButton.style('transition', 'all 0.2s');
+  regenerateButton.style('width', '50px');
+  regenerateButton.style('height', '50px');
+  regenerateButton.style('display', 'flex');
+  regenerateButton.style('align-items', 'center');
+  regenerateButton.style('justify-content', 'center');
+  regenerateButton.style('flex-shrink', '0');
+  regenerateButton.mousePressed(() => {
+    // Pick new random background color for canvas only
+    let bgArray = random(backgroundColors);
+    bcolor = color(bgArray[0], bgArray[1], bgArray[2]);
+    
+    // Fetch new birds to get different random selections
+    getBirdsFromSearch(displayText);
+    
+    // Note: setupLetterPositions() will be called in draw() once birds are loaded
+    animationStartTime = millis();
+    isAnimating = true;
+    loop();
+  });
+  regenerateButton.mouseOver(() => {
+    regenerateButton.style('background-color', '#555');
+    regenerateButton.style('transform', 'translateY(-1px)');
+    regenerateButton.style('box-shadow', '0 4px 6px rgba(0,0,0,0.2)');
+  });
+  regenerateButton.mouseOut(() => {
+    regenerateButton.style('background-color', '#333');
+    regenerateButton.style('transform', 'translateY(0)');
+    regenerateButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  });
+
+  let saveButton = createButton("⬇");
+  saveButton.parent(controlsDiv);
+  saveButton.style('padding', '12px');
+  saveButton.style('border', '2px solid #333');
+  saveButton.style('border-radius', '8px');
+  saveButton.style('font-size', '24px');
+  saveButton.style('background-color', '#333');
+  saveButton.style('color', '#fff');
+  saveButton.style('cursor', 'pointer');
+  saveButton.style('font-weight', '600');
+  saveButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  saveButton.style('transition', 'all 0.2s');
+  saveButton.style('width', '50px');
+  saveButton.style('height', '50px');
+  saveButton.style('display', 'flex');
+  saveButton.style('align-items', 'center');
+  saveButton.style('justify-content', 'center');
+  saveButton.style('flex-shrink', '0');
+  saveButton.mousePressed(() => {
+    save("feather-text.png");
+  });
+  saveButton.mouseOver(() => {
+    saveButton.style('background-color', '#555');
+    saveButton.style('transform', 'translateY(-1px)');
+    saveButton.style('box-shadow', '0 4px 6px rgba(0,0,0,0.2)');
+  });
+  saveButton.mouseOut(() => {
+    saveButton.style('background-color', '#333');
+    saveButton.style('transform', 'translateY(0)');
+    saveButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  });
+
+  // Spacer to push purchase buttons to the right
+  let spacer = createDiv('');
+  spacer.parent(controlsDiv);
+  spacer.style('flex-grow', '1');
+
+  // Download High-Res button (free)
+  let downloadButton = createButton("Download HD");
+  downloadButton.parent(controlsDiv);
+  downloadButton.style('padding', '12px 16px');
+  downloadButton.style('border', '2px solid #2563eb');
+  downloadButton.style('border-radius', '8px');
+  downloadButton.style('font-size', '14px');
+  downloadButton.style('background-color', '#2563eb');
+  downloadButton.style('color', '#fff');
+  downloadButton.style('cursor', 'pointer');
+  downloadButton.style('font-weight', '600');
+  downloadButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  downloadButton.style('transition', 'all 0.2s');
+  downloadButton.style('flex-shrink', '0');
+  downloadButton.mousePressed(() => startDigitalDownload());
+  downloadButton.mouseOver(() => {
+    downloadButton.style('background-color', '#1d4ed8');
+    downloadButton.style('transform', 'translateY(-1px)');
+  });
+  downloadButton.mouseOut(() => {
+    downloadButton.style('background-color', '#2563eb');
+    downloadButton.style('transform', 'translateY(0)');
+  });
+
+  // Order Print button ($25+)
+  let printButton = createButton("Order Print ($25+)");
+  printButton.parent(controlsDiv);
+  printButton.style('padding', '12px 16px');
+  printButton.style('border', '2px solid #059669');
+  printButton.style('border-radius', '8px');
+  printButton.style('font-size', '14px');
+  printButton.style('background-color', '#059669');
+  printButton.style('color', '#fff');
+  printButton.style('cursor', 'pointer');
+  printButton.style('font-weight', '600');
+  printButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+  printButton.style('transition', 'all 0.2s');
+  printButton.style('flex-shrink', '0');
+  printButton.mousePressed(() => startPrintPurchase());
+  printButton.mouseOver(() => {
+    printButton.style('background-color', '#047857');
+    printButton.style('transform', 'translateY(-1px)');
+  });
+  printButton.mouseOut(() => {
+    printButton.style('background-color', '#059669');
+    printButton.style('transform', 'translateY(0)');
+  });
+
+  // Use getBirdsFromSearch to load initial bird data based on displayText
+  getBirdsFromSearch(displayText);
+}
+
+function draw() {
+  // Server mode with pre-built data - render immediately
+  if (serverMode && serverLetterData && letterData.length > 0) {
+    drawFeatherText();
+    signalRenderComplete();
+    noLoop();
+    return;
+  }
+
+  if (birds === undefined || colorCount < 0) {
+    fill(0);
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    text("Waiting for bird data to load...", width / 2, height / 2);
+    return;
+  }
+
+  if (toLoad === 0) {
+    fill(0);
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    text("No birds found for this search term.", width / 2, height / 2);
+    noLoop();
+  } else if (birds && colorCount == toLoad) {
+    if (letterData.length === 0) {
+      setupLetterPositions();
+      // Start animation when letters are set up
+      animationStartTime = millis();
+      isAnimating = true;
+    }
+
+    drawFeatherText();
+
+    // Only stop looping when animation is complete
+    if (!isAnimating) {
+      // In server mode, signal render completion
+      if (serverMode) {
+        signalRenderComplete();
+      }
+      noLoop();
+    }
+  } else {
+    fill(0);
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    text(
+      `Loading colors... (${colorCount} / ${toLoad})`,
+      width / 2,
+      height / 2
+    );
+  }
+}
+
+// Setup letter positions from pre-built data (server mode)
+function setupLetterPositionsFromData(data) {
+  letterData = [];
+
+  // Dynamically calculate text size based on phrase length
+  let baseTextSize = 180;
+  let textSizeAdjustment = map(displayText.length, 1, 15, 1, 0.4);
+  let dynamicTextSize = baseTextSize * textSizeAdjustment;
+  dynamicTextSize = constrain(dynamicTextSize, 60, 180);
+
+  textSize(dynamicTextSize);
+  textAlign(CENTER, TOP);
+
+  // Calculate the width of each letter and total width
+  let letterWidths = [];
+  let totalWidth = 0;
+  for (let i = 0; i < displayText.length; i++) {
+    let w = textWidth(displayText[i]);
+    letterWidths.push(w);
+    totalWidth += w;
+  }
+
+  // Add spacing between letters
+  let letterSpacing = dynamicTextSize * 0.22;
+  totalWidth += letterSpacing * (displayText.length - 1);
+
+  // Scale everything to fit canvas with margins
+  let maxWidth = width * 0.9;
+  let scale = 1;
+  if (totalWidth > maxWidth) {
+    scale = maxWidth / totalWidth;
+    dynamicTextSize *= scale;
+    letterSpacing *= scale;
+    for (let i = 0; i < letterWidths.length; i++) {
+      letterWidths[i] *= scale;
+    }
+    totalWidth = maxWidth;
+  }
+
+  let startX = (width - totalWidth) / 2;
+  let primaryY = height / 2 - dynamicTextSize / 2;
+  let currentX = startX;
+
+  // Reconstruct letter data using passed data
+  for (let i = 0; i < displayText.length; i++) {
+    let letter = displayText[i];
+    let x = currentX + letterWidths[i] / 2;
+
+    // Get pre-built data for this letter
+    let prebuilt = data[i] || {};
+
+    // Create a mock bird object with the data we need
+    let mockBird = null;
+    if (prebuilt.birdName) {
+      mockBird = {
+        comName: prebuilt.birdName,
+        randomSeed: prebuilt.randomSeed || 0,
+      };
+    }
+
+    letterData.push({
+      char: letter,
+      x: x,
+      y: primaryY,
+      size: dynamicTextSize,
+      featherY: primaryY,
+      featherHeight: 250,
+      bird: mockBird,
+      birdName: prebuilt.birdName || "",
+      featherAngle: prebuilt.featherAngle || 0,
+    });
+
+    currentX += letterWidths[i] + letterSpacing;
+  }
+
+  // In server mode, skip animation - render final state immediately
+  if (serverMode) {
+    isAnimating = false;
+  } else {
+    animationStartTime = millis();
+    isAnimating = true;
+  }
+}
+
+function setupLetterPositions() {
+  letterData = [];
+  
+  // Debug: Check what birds we actually have
+  console.log("Total birds loaded:", birds.length);
+  console.log("Sample bird names:", birds.slice(0, 10).map(b => b.comName || b.name));
+  
+  // Dynamically calculate text size based on phrase length
+  let baseTextSize = 180;
+  let textSizeAdjustment = map(displayText.length, 1, 15, 1, 0.4); // Scale down for longer phrases
+  let dynamicTextSize = baseTextSize * textSizeAdjustment;
+  dynamicTextSize = constrain(dynamicTextSize, 60, 180); // Min 60, max 180
+  
+  textSize(dynamicTextSize);
+  textAlign(CENTER, TOP);
+  
+  // Calculate the width of each letter and total width
+  let letterWidths = [];
+  let totalWidth = 0;
+  for (let i = 0; i < displayText.length; i++) {
+    let w = textWidth(displayText[i]);
+    letterWidths.push(w);
+    totalWidth += w;
+  }
+  
+  // Add spacing between letters - scale with text size
+  let letterSpacing = dynamicTextSize * 0.22; // Proportional to text size
+  totalWidth += letterSpacing * (displayText.length - 1);
+  
+  // Scale everything to fit canvas with margins
+  let maxWidth = width * 0.9; // 90% of canvas width
+  let scale = 1;
+  if (totalWidth > maxWidth) {
+    scale = maxWidth / totalWidth;
+    dynamicTextSize *= scale;
+    letterSpacing *= scale;
+    for (let i = 0; i < letterWidths.length; i++) {
+      letterWidths[i] *= scale;
+    }
+    totalWidth = maxWidth;
+  }
+  
+  let startX = (width - totalWidth) / 2;
+  // Center the big letters vertically in the canvas
+  let primaryY = height / 2 - dynamicTextSize / 2;
+  
+  let currentX = startX;
+  let maxBirdNameLength = 0; // Track longest bird name
+  
+  // Create letter data for primary text
+  for (let i = 0; i < displayText.length; i++) {
+    let letter = displayText[i];
+    
+    // Position at center of this letter's width
+    let x = currentX + letterWidths[i] / 2;
+    
+    // Skip bird lookup for dashes
+    let selectedBird = null;
+    if (letter === '-') {
+      console.log(`Letter ${letter}: Dash - rendering as vertical tick`);
+    } else {
+      // Find birds where the first word of the common name starts with this letter
+      // For initial setup, accept all birds (color filtering happens during draw)
+      let matchingBirds = birds.filter(b => {
+        // Check both comName and name fields
+        let birdName = b.comName || b.name;
+        if (!birdName) {
+          return false;
+        }
+        
+        // Get the first word of the bird name
+        let firstName = birdName.trim().split(/\s+/)[0];
+        let matches = firstName.toUpperCase().startsWith(letter.toUpperCase());
+        
+        return matches;
+      });
+      
+      // Filter for birds with color data if colors are loaded
+      if (colorCount === toLoad) {
+        matchingBirds = matchingBirds.filter(b => {
+          let birdName = b.comName || b.name;
+          let colorData = colorMap[birdName.toUpperCase()];
+          return colorData && colorData.colors && colorData.colors.length > 2;
+        });
+      }
+      
+      // Pick a random bird from matching ones
+      if (matchingBirds.length > 0) {
+        selectedBird = random(matchingBirds);
+        let colorData = colorMap[selectedBird.comName.toUpperCase()];
+        let colorCount = colorData && colorData.colors ? colorData.colors.length : 0;
+        console.log(`Letter ${letter}: Found ${matchingBirds.length} birds, selected ${selectedBird.comName || selectedBird.name} (${colorCount} colors)`);
+        
+        // Track longest bird name (minus first letter since we skip it)
+        let birdNameLength = selectedBird.comName.length - 1;
+        maxBirdNameLength = max(maxBirdNameLength, birdNameLength);
+      } else {
+        console.log(`Letter ${letter}: No birds found!`);
+      }
+    }
+    
+    letterData.push({
+      char: letter,
+      x: x,
+      y: primaryY,
+      size: dynamicTextSize,
+      featherY: primaryY,
+      featherHeight: 250,
+      bird: selectedBird,
+      birdName: selectedBird ? (selectedBird.comName || selectedBird.name) : "",
+      featherAngle: random(-0.1, 0.1) // Store random angle so it doesn't change each frame
+    });
+    
+    // Move to next letter position
+    currentX += letterWidths[i] + letterSpacing;
+  }
+  
+  // Note: Canvas stays square - bird names that extend beyond will be scrollable
+  // Calculate how much vertical space is needed for reference
+  let birdNameSize = dynamicTextSize * 0.1;
+  let birdNameHeight = maxBirdNameLength * birdNameSize * 1.2;
+  let requiredHeight = primaryY + dynamicTextSize * 0.84 + birdNameHeight + 100;
+  
+  if (requiredHeight > height) {
+    console.log(`Bird names extend beyond canvas: needs ${requiredHeight}px, have ${height}px (will be scrollable)`);
+  }
+}
+
+function drawFeatherText() {
+  background(bcolor);
+
+  // Calculate animation progress (0 to 1)
+  let overallProgress;
+
+  // In server mode, skip animation - render final state
+  if (serverMode) {
+    overallProgress = 1.0;
+    isAnimating = false;
+  } else {
+    let elapsedTime = millis() - animationStartTime;
+    overallProgress = constrain(elapsedTime / animationDuration, 0, 1);
+
+    // Stop animating when complete (but draw one more frame)
+    if (overallProgress >= 1) {
+      isAnimating = false;
+      overallProgress = 1.0; // Ensure we're at exactly 1.0 for final frame
+    }
+  }
+  
+  // Draw feathers for each letter
+  for (let i = 0; i < letterData.length; i++) {
+    let letter = letterData[i];
+    
+    // Start feathers earlier and extend their animation time for overlap
+    // Account for the fact that feathers extend 2 letters forward
+    let totalSlots = letterData.length + 2; // Add 2 slots for last feather to complete
+    let featherStartTime = i / totalSlots;
+    let featherEndTime = (i + 2) / totalSlots;
+    
+    // Calculate this feather's animation progress (0 to 1)
+    let featherProgress = map(overallProgress, featherStartTime, featherEndTime, 0, 1);
+    featherProgress = constrain(featherProgress, 0, 1);
+    
+    // Ease the progress for smoother animation
+    let easedProgress = easeInOutCubic(featherProgress);
+    
+    // Draw feathers above this letter (skip for dashes)
+    if (letter.char !== '-') {
+      // If not animating, show feathers at full progress
+      let finalProgress = isAnimating ? easedProgress : 1.0;
+      if (!isAnimating || featherProgress > 0) {
+        drawFeathersForLetter(letter, finalProgress);
+      }
+    }
+  }
+  
+  // Draw the letters on top
+  fill(0);
+  textAlign(CENTER, TOP);
+  
+  for (let i = 0; i < letterData.length; i++) {
+    let letter = letterData[i];
+    
+    // Letters appear later in their time window
+    // Use same totalSlots calculation for consistency
+    let totalSlots = letterData.length + 2;
+    let letterStartTime = i / totalSlots + 0.3 / totalSlots; // Start 30% into the window
+    let letterEndTime = (i + 1) / totalSlots;
+    
+    // Calculate this letter's animation progress
+    let letterProgress = map(overallProgress, letterStartTime, letterEndTime, 0, 1);
+    letterProgress = constrain(letterProgress, 0, 1);
+    
+    // Only draw if letter has started appearing
+    if (letterProgress > 0) {
+      // Handle dashes as vertical ticks
+      if (letter.char === '-') {
+        push();
+        stroke(0);
+        strokeWeight(letter.size * 0.08); // Scale stroke weight with text size
+        let tickHeight = letter.size * 0.4; // Make tick 40% of text height
+        line(letter.x, letter.y + letter.size * 0.3, letter.x, letter.y + letter.size * 0.3 + tickHeight);
+        pop();
+      } else {
+        // Draw primary letter
+        textSize(letter.size * 0.75);
+        text(letter.char, letter.x, letter.y);
+      }
+      
+      // Draw bird name below in vertical text (skip for dashes)
+      // Only show bird name when letter animation is mostly complete (>50%)
+      if (letter.birdName && letter.char !== '-' && letterProgress > 0.5) {
+        let birdNameSize = letter.size * 0.1; // Scale to 10% of main text size
+        birdNameSize = max(birdNameSize, 12); // Minimum 12px for legibility
+        textSize(birdNameSize);
+        let yOffset = letter.y + letter.size * 0.84; // Position based on text size
+        let birdName = letter.birdName.toLowerCase();
+        
+        // Skip the first letter since it's already shown as the big character
+        let nameToDisplay = birdName.substring(1);
+        
+        for (let j = 0; j < nameToDisplay.length; j++) {
+          let char = nameToDisplay[j];
+          let charY = yOffset + j * (birdNameSize * 1.2);
+          
+          // Handle dashes as vertical centered ticks
+          if (char === '-') {
+            push();
+            stroke(0, 0, 0, 128); // 50% opacity (128 out of 255)
+            strokeWeight(birdNameSize * 0.08); // Thinner stroke
+            let tickHeight = birdNameSize * 0.25; // Shorter tick - 25% instead of 40%
+            line(letter.x, charY + birdNameSize * 0.4, letter.x, charY + birdNameSize * 0.4 + tickHeight);
+            pop();
+          } else {
+            text(char, letter.x, charY);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Easing function for smooth animation
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2;
+}
+
+function drawFeathersForLetter(letter, progress = 1) {
+  if (!letter.bird) {
+    // No bird found for this letter
+    return;
+  }
+  
+  let bird = letter.bird;
+  let colorData = colorMap[bird.comName.toUpperCase()];
+  
+  if (!colorData || !colorData.colors || colorData.colors.length === 0) {
+    return;
+  }
+  
+  // Draw only ONE feather per letter
+  let yPos = letter.featherY; // Start immediately above letter
+  
+  push();
+  translate(letter.x, yPos);
+  rotate(PI + letter.featherAngle); // Use stored angle so it doesn't change each frame
+  
+  // Scale feather size based on text size so they remain proportional
+  let textSizeScale = letter.size / 180; // Ratio compared to base size
+  let featherLength = map(bird.wingLength || 10, 0, 300, 200, 350) * textSizeScale;
+  
+  drawFeather(
+    featherLength * fscale,
+    colorData.colors,
+    progress, // Pass animation progress
+    bird.randomSeed || random(1000)
+  );
+  
+  pop();
+}
+
+function getBirdsFromSearch(_query) {
+  // Extract unique letters from the query (ignore spaces and dashes)
+  const uniqueLetters = [...new Set(
+    _query.toUpperCase()
+      .split('')
+      .filter(char => char.match(/[A-Z]/))
+  )].join(',');
+  
+  console.log(`Fetching birds starting with: ${uniqueLetters}`);
+  
+  // Use the startsWith endpoint with the unique letters
+  loadJSON(
+    colorserver + "search?query=startsWith:" + uniqueLetters + "&limit=100000", 
+    onSearch
+  );
+}
+
+function onSearch(_birds) {
+  console.log("GOT SEARCH BIRDS: " + _birds.results.length);
+  birds = _birds.results;
+  birds.forEach((b) => {
+    b.comName = b.name;
+    b.featherProgress = 1;
+    b.randomSeed = random(10000);
+    colorMap[b.comName.toUpperCase()] = b;
+  });
+
+  toLoad = birds.length;
+  colorCount = 0;
+  
+  // Reset letterData so it gets regenerated with new birds
+  letterData = [];
+
+  colorBirds(birds);
+}
+
+function colorBirds(_birds) {
+  _birds.forEach((bird) => {
+    if (bird.comName) {
+      let cn = bird.comName.toLowerCase();
+      getColorsForBird(cn);
+    } else if (bird.speciesCode) {
+      let cn = bird.speciesCode;
+      getColorsForBird(cn, true);
+    } else {
+      colorCount++;
+    }
+  });
+}
+
+function getColorsForBird(_birdName, isCode) {
+  fetch(
+    colorserver +
+      "birdcolor?species=" +
+      encodeURIComponent(_birdName) +
+      "&isCode=" +
+      encodeURIComponent(isCode)
+  )
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(
+          `HTTP error! status: ${response.status} for ${_birdName}`
+        );
+      }
+      return response.json();
+    })
+    .then((data) => {
+      addColor(data);
+    })
+    .catch((error) => {
+      console.error("Error fetching data:", error);
+      colorCount++;
+    });
+}
+
+function addColor(_data) {
+  if (codeMap[_data.ebirdCode]) {
+    codeMap[_data.ebirdCode].comName = _data.name;
+  }
+  colorMap[_data.name.toUpperCase()] = _data;
+
+  colorCount++;
+  if (colorCount == toLoad) {
+    console.log("All bird colors loaded.");
+    // Force regeneration of letter positions now that we have all color data
+    letterData = [];
+    loop();
+  }
+}
+
+function drawFeather(_length, _colors, _progress = 1, _rseed = 0) {
+  let newColors = [];
+  _colors.forEach((col) => {
+    for (let i = 0; i < Math.sqrt(col.span) * 10; i++) {
+      newColors.push(col);
+    }
+  });
+  newColors.reverse();
+  
+  push();
+  scale(1, 1.65);
+  scale(0.5);
+  
+  try {
+    randomSeed(_rseed);
+    drawFeatherSide(_length * 2, newColors, _progress);
+    scale(-1, 1);
+    randomSeed(_rseed);
+    drawFeatherSide(_length * 2, newColors, _progress);
+  } catch (_e) {
+    console.error("Error in drawFeather:", _e, _colors);
+  }
+  
+  pop();
+}
+
+function drawFeatherSide(_length, _colors, _progress = 1) {
+  let hf = 0.5;
+  let w = _length * 0.15;
+  let h = _length * hf;
+  let step = 2.5;
+
+  let stack = 0;
+  let stuck = false;
+
+  strokeWeight(1.5);
+
+  if (!_colors || _colors.length === 0) {
+    stroke(128);
+  }
+
+  for (let i = 0; i < _length * _progress; i += step) {
+    if (_colors && _colors.length > 0) {
+      let colorIndex = floor(map(i, 0, _length, 0, _colors.length));
+      stroke(_colors[colorIndex % _colors.length].hex);
+    }
+
+    /*
+    if (!stuck && random(100) < 5) {
+      stuck = true;
+    }
+    if (stuck && (random(100) < 20 || i > _length - 3)) {
+      stuck = !stuck;
+    }
+    */
+
+    let aw = sin(map(i, 0, _length, 0, PI)) * w;
+    if (i < _length * 0.2) aw *= random(0.1, 0.3);
+
+    if (!stuck) stack += step * hf + pow(i, 0.03) * 0.25;
+
+    let p0 = createVector(0, stack * 0.75);
+    let p1 = createVector(aw, stack);
+
+    noFill();
+    beginShape();
+    vertex(p0.x, p0.y);
+    vertex(p1.x, p1.y);
+    endShape();
+  }
+}
+
+function keyPressed() {
+  if (key === "s" || key === "S") {
+    save("feather-text.png");
+  }
+  if (key === "r" || key === "R") {
+    setupLetterPositions();
+    animationStartTime = millis();
+    isAnimating = true;
+    loop();
+  }
+}
+
+// Signal render completion for server mode
+function signalRenderComplete() {
+  if (serverMode && !document.getElementById('render-complete')) {
+    let d = document.createElement('div');
+    d.id = 'render-complete';
+    d.style.display = 'none';
+    d.textContent = 'done';
+    document.body.appendChild(d);
+  }
+}
+
+// Get current design settings for server rendering
+function getCurrentSettings() {
+  return {
+    displayText: displayText,
+    backgroundColor: bcolor ? [red(bcolor), green(bcolor), blue(bcolor)] : null,
+    // Pass complete letter data including bird info and random seeds
+    letterData: letterData.map(l => ({
+      char: l.char,
+      birdName: l.birdName,
+      featherAngle: l.featherAngle,
+      randomSeed: l.bird ? l.bird.randomSeed : 0,
+    })),
+    // Pass the color map for birds used
+    birdColors: letterData
+      .filter(l => l.birdName)
+      .reduce((acc, l) => {
+        const key = l.birdName.toUpperCase();
+        if (colorMap[key]) {
+          acc[key] = colorMap[key];
+        }
+        return acc;
+      }, {}),
+  };
+}
+
+// Initialize Stripe
+function initStripe() {
+  if (!stripe && window.Stripe && window.STRIPE_PUBLISHABLE_KEY) {
+    stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY);
+  }
+  return stripe;
+}
+
+// Create modal element
+function createModal(content, onClose) {
+  // Remove existing modal if any
+  let existing = document.getElementById('purchase-modal');
+  if (existing) existing.remove();
+
+  let overlay = document.createElement('div');
+  overlay.id = 'purchase-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      ${content}
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      closeModal();
+      if (onClose) onClose();
+    }
+  });
+
+  return overlay;
+}
+
+function closeModal() {
+  let modal = document.getElementById('purchase-modal');
+  if (modal) modal.remove();
+  cardElement = null;
+}
+
+// Start digital download (free with optional tip)
+function startDigitalDownload() {
+  const modalContent = `
+    <h2>Download High-Resolution Image</h2>
+    <p>Your high-res image is free! If you'd like to support this project, consider sending a tip.</p>
+    <div class="venmo-tip-box">
+      <div class="venmo-info">
+        <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
+        <span class="venmo-handle">@Jer-Thorp</span>
+      </div>
+      <p class="venmo-note">Tip any amount you'd like!</p>
+    </div>
+    <button onclick="handleDigitalDownload()" id="download-button" class="submit-button">
+      <span id="download-button-text">Generate High-Res Image</span>
+      <span id="download-spinner" class="spinner hidden"></span>
+    </button>
+  `;
+
+  createModal(modalContent);
+}
+
+// Handle digital download
+async function handleDigitalDownload() {
+  const button = document.getElementById('download-button');
+  const buttonText = document.getElementById('download-button-text');
+  const spinner = document.getElementById('download-spinner');
+
+  button.disabled = true;
+  buttonText.classList.add('hidden');
+  spinner.classList.remove('hidden');
+
+  try {
+    const response = await fetch('/render-digital', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        settings: getCurrentSettings(),
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    // Show success message with download link
+    const modalContent = document.querySelector('.modal-content');
+    modalContent.innerHTML = `
+      <h2>Your Image is Ready!</h2>
+      <p>Thanks for using FeatherType!</p>
+      <a href="${data.downloadUrl}" download class="download-link">Download Image</a>
+      <div class="venmo-tip-box" style="margin-top: 20px;">
+        <p style="margin: 0 0 8px 0; font-size: 14px;">Enjoying FeatherType? Consider a tip!</p>
+        <div class="venmo-info">
+          <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
+          <span class="venmo-handle">@Jer-Thorp</span>
+        </div>
+      </div>
+      <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
+    `;
+  } catch (error) {
+    alert('Error generating image: ' + error.message);
+    button.disabled = false;
+    buttonText.classList.remove('hidden');
+    spinner.classList.add('hidden');
+  }
+}
+
+// Start print purchase (2-step process)
+function startPrintPurchase() {
+  currentPurchase.type = 'print';
+
+  const modalContent = `
+    <h2>Order a Print</h2>
+    <form id="address-form" onsubmit="handleAddressSubmit(event)">
+      <div class="form-group">
+        <label>Select Size & Style</label>
+        <div class="product-options">
+          <label class="product-option">
+            <input type="radio" name="productType" value="print-12x12" checked>
+            <span class="option-content">
+              <span class="option-name">12x12 Print</span>
+              <span class="option-price">$25.00</span>
+            </span>
+          </label>
+          <label class="product-option">
+            <input type="radio" name="productType" value="print-12x12-framed">
+            <span class="option-content">
+              <span class="option-name">12x12 Framed</span>
+              <span class="option-price">$65.00</span>
+            </span>
+          </label>
+          <label class="product-option">
+            <input type="radio" name="productType" value="print-16x16">
+            <span class="option-content">
+              <span class="option-name">16x16 Print</span>
+              <span class="option-price">$35.00</span>
+            </span>
+          </label>
+          <label class="product-option">
+            <input type="radio" name="productType" value="print-16x16-framed">
+            <span class="option-content">
+              <span class="option-name">16x16 Framed</span>
+              <span class="option-price">$85.00</span>
+            </span>
+          </label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" required placeholder="John Doe">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="print-email">Email Address</label>
+        <input type="email" id="print-email" name="email" required placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label for="address1">Street Address</label>
+        <input type="text" id="address1" name="address1" required placeholder="123 Main St">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="city">City</label>
+          <input type="text" id="city" name="city" required placeholder="New York">
+        </div>
+        <div class="form-group">
+          <label for="state">State</label>
+          <input type="text" id="state" name="state" required placeholder="NY">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="zip">ZIP Code</label>
+          <input type="text" id="zip" name="zip" required placeholder="10001">
+        </div>
+        <div class="form-group">
+          <label for="country">Country</label>
+          <select id="country" name="country" required>
+            <option value="US">United States</option>
+            <option value="CA">Canada</option>
+            <option value="GB">United Kingdom</option>
+            <option value="AU">Australia</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="print-discount">Discount Code (optional)</label>
+        <input type="text" id="print-discount" name="discountCode" placeholder="Enter code">
+      </div>
+      <button type="submit" id="address-submit" class="submit-button">
+        <span id="address-button-text">Get Shipping Quote</span>
+        <span id="address-spinner" class="spinner hidden"></span>
+      </button>
+    </form>
+  `;
+
+  createModal(modalContent);
+}
+
+// Handle address form submission - get shipping quote
+async function handleAddressSubmit(event) {
+  event.preventDefault();
+
+  const submitButton = document.getElementById('address-submit');
+  const buttonText = document.getElementById('address-button-text');
+  const spinner = document.getElementById('address-spinner');
+
+  submitButton.disabled = true;
+  buttonText.classList.add('hidden');
+  spinner.classList.remove('hidden');
+
+  const productType = document.querySelector('input[name="productType"]:checked').value;
+
+  const address = {
+    name: document.getElementById('name').value,
+    address1: document.getElementById('address1').value,
+    city: document.getElementById('city').value,
+    state: document.getElementById('state').value,
+    zip: document.getElementById('zip').value,
+    country: document.getElementById('country').value,
+  };
+
+  const email = document.getElementById('print-email').value;
+  const discountCode = document.getElementById('print-discount').value;
+
+  try {
+    const response = await fetch('/get-quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address: address,
+        email: email,
+        discountCode: discountCode,
+        productType: productType,
+        settings: getCurrentSettings(),
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    // Store purchase details
+    currentPurchase.clientSecret = data.clientSecret;
+    currentPurchase.email = email;
+    currentPurchase.address = address;
+    currentPurchase.productType = productType;
+    currentPurchase.productName = data.productName;
+    currentPurchase.productPrice = data.productPrice;
+    currentPurchase.shippingCost = data.shippingCost;
+    currentPurchase.totalAmount = data.totalAmount;
+
+    // Show payment step
+    showPaymentStep();
+  } catch (error) {
+    alert('Error getting shipping quote: ' + error.message);
+    submitButton.disabled = false;
+    buttonText.classList.remove('hidden');
+    spinner.classList.add('hidden');
+  }
+}
+
+// Show payment step with price breakdown
+function showPaymentStep() {
+  const modalContent = document.querySelector('.modal-content');
+
+  modalContent.innerHTML = `
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <h2>Complete Your Order</h2>
+    <div class="price-breakdown">
+      <div class="price-row">
+        <span>${currentPurchase.productName}</span>
+        <span>$${(currentPurchase.productPrice / 100).toFixed(2)}</span>
+      </div>
+      <div class="price-row">
+        <span>Shipping</span>
+        <span>$${(currentPurchase.shippingCost / 100).toFixed(2)}</span>
+      </div>
+      <div class="price-row total">
+        <span>Total</span>
+        <span>$${(currentPurchase.totalAmount / 100).toFixed(2)}</span>
+      </div>
+    </div>
+    <form id="payment-form" onsubmit="handlePrintPayment(event)">
+      <div class="form-group">
+        <label>Card Details</label>
+        <div id="card-element"></div>
+        <div id="card-errors" class="error-message"></div>
+      </div>
+      <button type="submit" id="pay-submit" class="submit-button">
+        <span id="pay-button-text">Pay $${(currentPurchase.totalAmount / 100).toFixed(2)}</span>
+        <span id="pay-spinner" class="spinner hidden"></span>
+      </button>
+    </form>
+  `;
+
+  // Initialize Stripe Elements
+  initStripe();
+  if (stripe) {
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+      style: {
+        base: {
+          fontSize: '16px',
+          color: '#333',
+          '::placeholder': { color: '#aab7c4' },
+        },
+      },
+    });
+    cardElement.mount('#card-element');
+
+    cardElement.on('change', (event) => {
+      const displayError = document.getElementById('card-errors');
+      displayError.textContent = event.error ? event.error.message : '';
+    });
+  }
+}
+
+// Handle print payment
+async function handlePrintPayment(event) {
+  event.preventDefault();
+
+  const submitButton = document.getElementById('pay-submit');
+  const buttonText = document.getElementById('pay-button-text');
+  const spinner = document.getElementById('pay-spinner');
+
+  submitButton.disabled = true;
+  buttonText.classList.add('hidden');
+  spinner.classList.remove('hidden');
+
+  try {
+    const { error, paymentIntent } = await stripe.confirmCardPayment(currentPurchase.clientSecret, {
+      payment_method: { card: cardElement },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (paymentIntent.status === 'succeeded') {
+      await finalizePrintOrder(paymentIntent.id);
+    }
+  } catch (error) {
+    const errorDiv = document.getElementById('card-errors');
+    errorDiv.textContent = error.message;
+    submitButton.disabled = false;
+    buttonText.classList.remove('hidden');
+    spinner.classList.add('hidden');
+  }
+}
+
+// Finalize print order
+async function finalizePrintOrder(paymentIntentId) {
+  try {
+    const response = await fetch('/finalize-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paymentIntentId: paymentIntentId,
+        settings: getCurrentSettings(),
+        address: currentPurchase.address,
+        email: currentPurchase.email,
+        productType: currentPurchase.productType,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+
+    // Show success message
+    const modalContent = document.querySelector('.modal-content');
+    modalContent.innerHTML = `
+      <h2>Order Confirmed!</h2>
+      <p>Your print has been ordered and will ship soon.</p>
+      <p>Order ID: ${data.orderId}</p>
+      <p class="modal-note">A confirmation email has been sent to ${currentPurchase.email}</p>
+      <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
+    `;
+  } catch (error) {
+    const errorDiv = document.getElementById('card-errors');
+    if (errorDiv) errorDiv.textContent = error.message;
+  }
+}
+
+// Make functions available globally for onclick handlers
+window.handleDigitalDownload = handleDigitalDownload;
+window.handleAddressSubmit = handleAddressSubmit;
+window.handlePrintPayment = handlePrintPayment;
+window.closeModal = closeModal;

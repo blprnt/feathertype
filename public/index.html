@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Generate beautiful feather text graphics from bird colors">
+
+    <title>FeatherType</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪶</text></svg>">
+    <!-- import the webpage's stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+
+    <!-- Stripe.js for payments -->
+    <script src="https://js.stripe.com/v3/"></script>
+
+    <!-- p5.js -->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.3.0/lib/p5.js"></script>
+
+    <!-- Set Stripe publishable key from server -->
+    <script>
+      window.STRIPE_PUBLISHABLE_KEY = "{{ stripePublishableKey }}";
+    </script>
+
+    <!-- import the webpage's client-side javascript file -->
+    <script src="/sketch.js" defer></script>
+  </head>
+  <body>
+    <!-- Modal container will be added dynamically by sketch.js -->
+  </body>
+</html>
