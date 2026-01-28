@@ -428,7 +428,7 @@ function setup() {
   contactButton.style('cursor', 'pointer');
   contactButton.style('transition', 'all 0.2s');
   contactButton.mousePressed(() => {
-    window.location.href = 'mailto:jer.thorp@hey.com';
+    window.open('https://www.jerthorp.me/contact', '_blank');
   });
   contactButton.mouseOver(() => {
     contactButton.style('background-color', 'rgba(0,0,0,0.2)');
