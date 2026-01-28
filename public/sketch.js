@@ -1680,7 +1680,7 @@ function startVideoPurchase() {
       <img src="${thumbnail}" style="max-width: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
     </div>` : ''}
     <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
-      <a href="https://www.jerthorp.me/post/of-a-feather" target="_blank" style="color: #2563eb;">See sample video →</a><br>
+      <a href="/prints/feathertype-1769623470552-08i1r32em.mp4" target="_blank" style="color: #2563eb;">See sample video →</a><br>
       Videos are rendered on our server and may take 1-2 minutes to generate.
     </p>
     <form id="video-form" onsubmit="handleVideoSubmit(event)">
