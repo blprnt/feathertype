@@ -649,7 +649,10 @@ function setupLetterPositionsFromData(data) {
 
 function setupLetterPositions() {
   letterData = [];
-  
+
+  // Track used birds to prevent duplicates for repeated letters
+  let usedBirds = new Set();
+
   // Debug: Check what birds we actually have
   console.log("Total birds loaded:", birds.length);
   console.log("Sample bird names:", birds.slice(0, 10).map(b => b.comName || b.name));
@@ -757,13 +760,23 @@ function setupLetterPositions() {
         });
       }
 
-      // Pick a random bird from matching ones
-      if (matchingBirds.length > 0) {
-        selectedBird = random(matchingBirds);
+      // Filter out already-used birds to prevent duplicates for repeated letters
+      let availableBirds = matchingBirds.filter(b => !usedBirds.has(b.comName));
+
+      // If all matching birds are used, fall back to allowing duplicates
+      if (availableBirds.length === 0 && matchingBirds.length > 0) {
+        console.log(`Letter ${letter}: All matching birds already used, allowing duplicate`);
+        availableBirds = matchingBirds;
+      }
+
+      // Pick a random bird from available ones
+      if (availableBirds.length > 0) {
+        selectedBird = random(availableBirds);
+        usedBirds.add(selectedBird.comName); // Mark as used
         let colorData = colorMap[selectedBird.comName.toUpperCase()];
         let colorCount = colorData && colorData.colors ? colorData.colors.length : 0;
-        console.log(`Letter ${letter}: Found ${matchingBirds.length} birds, selected ${selectedBird.comName || selectedBird.name} (${colorCount} colors)`);
-        
+        console.log(`Letter ${letter}: Found ${availableBirds.length} available birds, selected ${selectedBird.comName || selectedBird.name} (${colorCount} colors)`);
+
         // Track longest bird name (minus first letter since we skip it)
         let birdNameLength = selectedBird.comName.length - 1;
         maxBirdNameLength = max(maxBirdNameLength, birdNameLength);
