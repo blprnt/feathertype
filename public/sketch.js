@@ -99,7 +99,14 @@ let myFont;
 const defaultPhrases = [
   "FLOCK TOGETHER",
   "HOPE IS A THING WITH FEATHERS",
-  "BECAUSE IT HAS A SONG."
+  "BECAUSE IT HAS A SONG.",
+  "DIVERSITY IS STRENGTH.",
+  "NESTING.",
+  "I REALLY LIKE BIRDS.",
+  "LOVEBIRDS.",
+  "ALWAYS BE BIRDING.",
+  "FUCK YEAH, BIRDS.",
+  "ALWAYS REMEMBER TO LOOK UP."
 ];
 let displayText = defaultPhrases[Math.floor(Math.random() * defaultPhrases.length)];
 
