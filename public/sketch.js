@@ -106,7 +106,8 @@ const defaultPhrases = [
   "LOVEBIRDS.",
   "ALWAYS BE BIRDING.",
   "FUCK YEAH, BIRDS.",
-  "ALWAYS REMEMBER TO LOOK UP."
+  "ALWAYS REMEMBER TO LOOK UP.",
+  "FLOCK, YEAH!"
 ];
 let displayText = defaultPhrases[Math.floor(Math.random() * defaultPhrases.length)];
 
