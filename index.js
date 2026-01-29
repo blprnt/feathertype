@@ -20,6 +20,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // Puppeteer for server-side rendering
 import puppeteer from "puppeteer";
 
+// Resend for email notifications
+import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // Get directory name for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -129,6 +133,93 @@ function sanitizeSettings(settings) {
   }
 
   return settings;
+}
+
+// Email notification functions
+async function sendVideoEmail(email, downloadUrl, displayText) {
+  try {
+    await resend.emails.send({
+      from: "FeatherType <noreply@feathertype.binstobins.com>",
+      to: email,
+      subject: "Your FeatherType Video is Ready!",
+      html: `
+        <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #333; font-size: 24px;">Your FeatherType Video is Ready!</h1>
+          <p style="color: #555; font-size: 16px; line-height: 1.6;">
+            Thank you for your purchase! Your animated video for "<strong>${displayText}</strong>" has been rendered and is ready to download.
+          </p>
+          <div style="margin: 30px 0; text-align: center;">
+            <a href="${downloadUrl}"
+               style="display: inline-block; background-color: #7c3aed; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">
+              Download Your Video
+            </a>
+          </div>
+          <p style="color: #888; font-size: 14px;">
+            This download link will remain available for 30 days. If you have any questions, please reply to this email.
+          </p>
+          <div style="background-color: #f9f5ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="color: #555; font-size: 14px; margin: 0 0 10px 0;">
+              Want more creative projects like FeatherType?
+            </p>
+            <a href="https://www.jerthorp.me/news"
+               style="color: #7c3aed; font-weight: 600; text-decoration: none;">
+              Subscribe to Jer's newsletter →
+            </a>
+          </div>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #aaa; font-size: 12px; text-align: center;">
+            Made with 🪶 by <a href="https://jerthorp.com" style="color: #7c3aed;">Jer Thorp</a>
+          </p>
+        </div>
+      `,
+    });
+    console.log(`Video email sent to ${email}`);
+  } catch (error) {
+    console.error("Error sending video email:", error);
+  }
+}
+
+async function sendPrintOrderEmail(email, orderId, displayText, productName) {
+  try {
+    await resend.emails.send({
+      from: "FeatherType <noreply@feathertype.binstobins.com>",
+      to: email,
+      subject: "Your FeatherType Print Order Confirmation",
+      html: `
+        <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #333; font-size: 24px;">Order Confirmed!</h1>
+          <p style="color: #555; font-size: 16px; line-height: 1.6;">
+            Thank you for your order! Your <strong>${productName}</strong> featuring "<strong>${displayText}</strong>" is being prepared.
+          </p>
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #333;"><strong>Order ID:</strong> ${orderId}</p>
+          </div>
+          <p style="color: #555; font-size: 16px; line-height: 1.6;">
+            Your print will be produced and shipped within 3-7 business days. You'll receive tracking information once it ships.
+          </p>
+          <p style="color: #888; font-size: 14px;">
+            If you have any questions about your order, please reply to this email with your Order ID.
+          </p>
+          <div style="background-color: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="color: #555; font-size: 14px; margin: 0 0 10px 0;">
+              Want more creative projects like FeatherType?
+            </p>
+            <a href="https://www.jerthorp.me/news"
+               style="color: #059669; font-weight: 600; text-decoration: none;">
+              Subscribe to Jer's newsletter →
+            </a>
+          </div>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #aaa; font-size: 12px; text-align: center;">
+            Made with 🪶 by <a href="https://jerthorp.com" style="color: #059669;">Jer Thorp</a>
+          </p>
+        </div>
+      `,
+    });
+    console.log(`Print order email sent to ${email}`);
+  } catch (error) {
+    console.error("Error sending print order email:", error);
+  }
 }
 
 // Create Express app
@@ -254,7 +345,7 @@ app.post("/purchase-video", async (req, res) => {
 // Finalize video download - render animation frames and encode to MP4
 app.post("/finalize-video", async (req, res) => {
   try {
-    const { paymentIntentId } = req.body;
+    const { paymentIntentId, email } = req.body;
     const settings = sanitizeSettings(req.body.settings);
 
     // Verify payment was successful (skip if free with discount code)
@@ -271,6 +362,13 @@ app.post("/finalize-video", async (req, res) => {
 
     // Render video with Puppeteer + ffmpeg
     await renderVideo(settings, outputPath, videoId);
+
+    const downloadUrl = `${BASE_URL}/prints/feathertype-${videoId}.mp4`;
+
+    // Send email notification
+    if (email) {
+      await sendVideoEmail(email, downloadUrl, settings.displayText || "your design");
+    }
 
     res.json({
       success: true,
@@ -369,6 +467,11 @@ app.post("/finalize-order", async (req, res) => {
       product.sku,
       isFramed ? frameColor : null
     );
+
+    // Send order confirmation email
+    if (email) {
+      await sendPrintOrderEmail(email, prodigiOrder.id, settings.displayText || "your design", product.name);
+    }
 
     res.json({
       success: true,

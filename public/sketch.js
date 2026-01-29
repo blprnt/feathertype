@@ -2000,6 +2000,7 @@ async function finalizeVideoOrder(paymentIntentId, email) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         paymentIntentId: paymentIntentId,
+        email: email,
         settings: getCurrentSettings(),
       }),
     });
