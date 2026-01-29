@@ -431,16 +431,16 @@ function setup() {
   infoButton.style('border-radius', '20px');
   infoButton.style('font-size', '14px');
   infoButton.style('font-family', 'Playfair Display, serif');
-  infoButton.style('background-color', 'rgba(0,0,0,0.1)');
+  infoButton.style('background-color', 'rgba(255,255,255,0.75)');
   infoButton.style('color', '#333');
   infoButton.style('cursor', 'pointer');
   infoButton.style('transition', 'all 0.2s');
   infoButton.mousePressed(() => showInfoModal());
   infoButton.mouseOver(() => {
-    infoButton.style('background-color', 'rgba(0,0,0,0.2)');
+    infoButton.style('background-color', 'rgba(255,255,255,0.95)');
   });
   infoButton.mouseOut(() => {
-    infoButton.style('background-color', 'rgba(0,0,0,0.1)');
+    infoButton.style('background-color', 'rgba(255,255,255,0.75)');
   });
 
   // "Get in touch" button
@@ -451,7 +451,7 @@ function setup() {
   contactButton.style('border-radius', '20px');
   contactButton.style('font-size', '14px');
   contactButton.style('font-family', 'Playfair Display, serif');
-  contactButton.style('background-color', 'rgba(0,0,0,0.1)');
+  contactButton.style('background-color', 'rgba(255,255,255,0.75)');
   contactButton.style('color', '#333');
   contactButton.style('cursor', 'pointer');
   contactButton.style('transition', 'all 0.2s');
@@ -459,10 +459,10 @@ function setup() {
     window.open('https://www.jerthorp.me/contact', '_blank');
   });
   contactButton.mouseOver(() => {
-    contactButton.style('background-color', 'rgba(0,0,0,0.2)');
+    contactButton.style('background-color', 'rgba(255,255,255,0.95)');
   });
   contactButton.mouseOut(() => {
-    contactButton.style('background-color', 'rgba(0,0,0,0.1)');
+    contactButton.style('background-color', 'rgba(255,255,255,0.75)');
   });
 
   // "Follow me on Instagram" button
@@ -473,7 +473,7 @@ function setup() {
   instaButton.style('border-radius', '20px');
   instaButton.style('font-size', '14px');
   instaButton.style('font-family', 'Playfair Display, serif');
-  instaButton.style('background-color', 'rgba(0,0,0,0.1)');
+  instaButton.style('background-color', 'rgba(255,255,255,0.75)');
   instaButton.style('color', '#333');
   instaButton.style('cursor', 'pointer');
   instaButton.style('transition', 'all 0.2s');
@@ -483,10 +483,10 @@ function setup() {
     window.open('https://www.instagram.com/blprnt', '_blank');
   });
   instaButton.mouseOver(() => {
-    instaButton.style('background-color', 'rgba(0,0,0,0.2)');
+    instaButton.style('background-color', 'rgba(255,255,255,0.95)');
   });
   instaButton.mouseOut(() => {
-    instaButton.style('background-color', 'rgba(0,0,0,0.1)');
+    instaButton.style('background-color', 'rgba(255,255,255,0.75)');
   });
 
   // Use getBirdsFromSearch to load initial bird data based on displayText
@@ -1361,6 +1361,11 @@ async function handleDigitalDownload() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
 
+    // Track image download
+    if (typeof umami !== 'undefined') {
+      umami.track('image-download', { text: displayText });
+    }
+
     // Show success message with download link
     const modalContent = document.querySelector('.modal-content');
     modalContent.innerHTML = `
@@ -2004,6 +2009,11 @@ async function finalizeVideoOrder(paymentIntentId, email) {
 
     // Allow modal to be closed now
     setModalProcessing(false);
+
+    // Track video download
+    if (typeof umami !== 'undefined') {
+      umami.track('video-download', { text: displayText });
+    }
 
     // Show success message with video player
     const modalContent = document.querySelector('.modal-content');
