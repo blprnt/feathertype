@@ -1337,11 +1337,11 @@ function startDigitalDownload() {
     <p style="margin-bottom: 8px;"><strong>4800 x 4800 pixels</strong> (16" x 16" at 300 DPI)</p>
     <p>Your high-res image is free! If you'd like to support this project, consider sending a tip.</p>
     <div class="venmo-tip-box">
-      <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=5&note=FeatherType" target="_blank" class="venmo-link">
+      <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=3&note=FeatherType" target="_blank" class="venmo-link">
         <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
         <span class="venmo-handle">@Jer-Thorp</span>
       </a>
-      <p class="venmo-note">Suggested tip: $5</p>
+      <p class="venmo-note">Suggested tip: $3</p>
     </div>
     <button onclick="handleDigitalDownload()" id="download-button" class="submit-button">
       <span id="download-button-text">Get 🖼️</span>
@@ -1386,8 +1386,8 @@ async function handleDigitalDownload() {
       <p>Thanks for using FeatherType!</p>
       <a href="${data.downloadUrl}" download class="download-link">Download Image</a>
       <div class="venmo-tip-box" style="margin-top: 20px;">
-        <p style="margin: 0 0 8px 0; font-size: 14px;">Enjoying FeatherType? Suggested tip: $5</p>
-        <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=5&note=FeatherType" target="_blank" class="venmo-link">
+        <p style="margin: 0 0 8px 0; font-size: 14px;">Enjoying FeatherType? Suggested tip: $3</p>
+        <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=3&note=FeatherType" target="_blank" class="venmo-link">
           <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
           <span class="venmo-handle">@Jer-Thorp</span>
         </a>
