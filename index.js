@@ -104,7 +104,7 @@ function sanitizeSettings(settings) {
   // Sanitize displayText
   if (settings.displayText) {
     let text = String(settings.displayText).slice(0, MAX_PHRASE_LENGTH);
-    settings.displayText = text.replace(/[^A-Z0-9\s\-'.!?]/gi, '').toUpperCase();
+    settings.displayText = text.replace(/[^A-Z0-9\s\-'.!?+&]/gi, '').toUpperCase();
   }
 
   // Validate backgroundColor is array of 3 numbers

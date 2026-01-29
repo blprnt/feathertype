@@ -279,7 +279,7 @@ function setup() {
   const updateText = () => {
     // Sanitize: only allow letters, numbers, spaces, and basic punctuation
     let rawText = textInput.value().toUpperCase().slice(0, MAX_PHRASE_LENGTH);
-    displayText = rawText.replace(/[^A-Z0-9\s\-'.!?]/g, '');
+    displayText = rawText.replace(/[^A-Z0-9\s\-'.!?+&]/g, '');
 
     // Pick new random background color for canvas only
     let bgArray = random(backgroundColors);
