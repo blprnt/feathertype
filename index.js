@@ -34,6 +34,7 @@ const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const LOCAL_URL = `http://localhost:${PORT}`; // Always use local URL for Puppeteer rendering
 
 // Parse discount codes from environment (normalize keys to uppercase)
+// Format: { "CODE": 0.10 } or { "CODE": { "discount": 0.10, "products": ["video", "print"] } }
 let discountCodes = {};
 try {
   const parsed = JSON.parse(process.env.DISCOUNT_CODES || "{}");
@@ -42,6 +43,35 @@ try {
   }
 } catch (e) {
   console.error("Error parsing DISCOUNT_CODES:", e);
+}
+
+// Helper to get discount for a specific product type
+// productType: "video" or "print"
+function getDiscountForProduct(code, productType) {
+  if (!code) return null;
+
+  const discountEntry = discountCodes[code.toUpperCase()];
+  if (discountEntry === undefined) return null;
+
+  // Simple format: just a number (applies to all products)
+  if (typeof discountEntry === 'number') {
+    return discountEntry;
+  }
+
+  // Object format: { discount: 0.10, products: ["video", "print"] }
+  if (typeof discountEntry === 'object' && discountEntry.discount !== undefined) {
+    // If no products specified, applies to all
+    if (!discountEntry.products || discountEntry.products.length === 0) {
+      return discountEntry.discount;
+    }
+    // Check if this product type is in the allowed list
+    if (discountEntry.products.includes(productType)) {
+      return discountEntry.discount;
+    }
+    return null; // Code exists but doesn't apply to this product
+  }
+
+  return null;
 }
 
 // Prodigi API configuration (using live API)
@@ -254,14 +284,14 @@ app.get("/prints/:filename", (req, res) => {
 
 // Check discount code validity
 app.post("/check-discount", (req, res) => {
-  const { discountCode, productPrice } = req.body;
+  const { discountCode, productPrice, productType } = req.body;
 
   if (!discountCode) {
     return res.json({ valid: false });
   }
 
-  const discount = discountCodes[discountCode.toUpperCase()];
-  if (discount !== undefined) {
+  const discount = getDiscountForProduct(discountCode, productType || "all");
+  if (discount !== null) {
     const discountedPrice = Math.round(productPrice * (1 - discount));
     res.json({
       valid: true,
@@ -302,11 +332,10 @@ app.post("/purchase-video", async (req, res) => {
     const settings = sanitizeSettings(req.body.settings);
 
     let videoPrice = products.video.price;
-    let discount = 0;
 
-    // Apply discount if valid
-    if (discountCode && discountCodes[discountCode.toUpperCase()]) {
-      discount = discountCodes[discountCode.toUpperCase()];
+    // Apply discount if valid for video products
+    const discount = getDiscountForProduct(discountCode, "video");
+    if (discount !== null) {
       videoPrice = Math.round(videoPrice * (1 - discount));
     }
 
@@ -392,14 +421,13 @@ app.post("/get-quote", async (req, res) => {
     }
 
     // Get shipping quote from Prodigi
-    const shippingCost = await getProdigiShippingQuote(address, product.sku);
+    let shippingCost = await getProdigiShippingQuote(address, product.sku);
 
     let productPrice = product.basePrice;
 
-    // Apply discount if valid
-    let discount = 0;
-    if (discountCode && discountCodes[discountCode.toUpperCase()]) {
-      discount = discountCodes[discountCode.toUpperCase()];
+    // Apply discount if valid for print products
+    const discount = getDiscountForProduct(discountCode, "print");
+    if (discount !== null) {
       productPrice = Math.round(productPrice * (1 - discount));
       // 100% discount also means free shipping
       if (discount >= 1.0) {

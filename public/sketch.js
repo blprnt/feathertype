@@ -1892,7 +1892,7 @@ async function checkVideoDiscount() {
     const response = await fetch('/check-discount', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discountCode, productPrice: 1000 }),
+      body: JSON.stringify({ discountCode, productPrice: 500, productType: 'video' }),
     });
 
     const data = await response.json();
