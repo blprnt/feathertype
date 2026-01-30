@@ -66,7 +66,7 @@
       .hero {
         position: relative;
         z-index: 1;
-        min-height: 125vh;
+        min-height: 110vh;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -109,39 +109,25 @@
         box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
       }
 
-      /* Scroll indicator */
-      .scroll-indicator {
-        margin-top: 40px;
+      /* Hero buttons container */
+      .hero-buttons {
         display: flex;
-        flex-direction: column;
+        gap: 20px;
         align-items: center;
-        color: #666;
-        font-size: 0.95rem;
-        animation: bounce 2s infinite;
+      }
+
+      .gallery-button {
         background: rgba(255, 255, 255, 0.75);
-        padding: 15px 25px;
-        border-radius: 12px;
+        color: #444;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
       }
 
-      .scroll-indicator svg {
-        margin-top: 8px;
-        width: 24px;
-        height: 24px;
-        stroke: #666;
-      }
-
-      @keyframes bounce {
-        0%, 20%, 50%, 80%, 100% {
-          transform: translateY(0);
-        }
-        40% {
-          transform: translateY(8px);
-        }
-        60% {
-          transform: translateY(4px);
-        }
+      .gallery-button:hover {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
       }
 
       /* Scrollable content sections */
@@ -345,19 +331,16 @@
     <!-- Hero Section - floats over animation -->
     <section class="hero">
       <h1>Transform any phrase into typographic feather art, colored by descriptions of real birds</h1>
-      <a href="/create" class="cta-button">Make Your Own!</a>
-      <div class="scroll-indicator">
-        <span>See the gallery</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
-        </svg>
+      <div class="hero-buttons">
+        <a href="/create" class="cta-button">Make Your Own!</a>
+        <a href="#gallery-section" class="cta-button gallery-button">See the Gallery</a>
       </div>
     </section>
 
     <!-- Content that scrolls over the background -->
     <div class="content-sections">
       <!-- Gallery Section -->
-      <section class="gallery-section">
+      <section class="gallery-section" id="gallery-section">
       <h2>Gallery</h2>
       <div class="gallery-grid" id="gallery-grid">
         <!-- Gallery items loaded dynamically -->
