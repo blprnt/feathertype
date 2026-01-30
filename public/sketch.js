@@ -20,6 +20,7 @@ let codeMap = {};
 // Stripe instance (initialized when needed)
 let stripe = null;
 let cardElement = null;
+let carouselInterval = null;
 
 // Product configuration
 const products = {
@@ -1327,6 +1328,12 @@ function closeModal() {
   let modal = document.getElementById('purchase-modal');
   if (modal) modal.remove();
   cardElement = null;
+
+  // Clear carousel interval if running
+  if (carouselInterval) {
+    clearInterval(carouselInterval);
+    carouselInterval = null;
+  }
 }
 
 // Set modal to processing state (prevents closing)
@@ -1416,6 +1423,20 @@ function startPrintPurchase() {
 
   const modalContent = `
     <h2>Order a Print</h2>
+    <div class="print-carousel">
+      <div class="carousel-container">
+        <img src="/carousel/carousel1_small.jpg" class="carousel-img active" alt="Print example 1">
+        <img src="/carousel/carousel2_small.jpg" class="carousel-img" alt="Print example 2">
+        <img src="/carousel/carousel3_small.jpg" class="carousel-img" alt="Print example 3">
+        <img src="/carousel/carousel4_small.jpg" class="carousel-img" alt="Print example 4">
+      </div>
+      <div class="carousel-dots">
+        <span class="carousel-dot active" onclick="showCarouselSlide(0)"></span>
+        <span class="carousel-dot" onclick="showCarouselSlide(1)"></span>
+        <span class="carousel-dot" onclick="showCarouselSlide(2)"></span>
+        <span class="carousel-dot" onclick="showCarouselSlide(3)"></span>
+      </div>
+    </div>
     <form id="address-form" onsubmit="handleAddressSubmit(event)">
       <div class="form-group">
         <label>Select Size & Style <span class="info-icon" onclick="showPrintInfo()" title="Print info">ⓘ</span></label>
@@ -1511,6 +1532,9 @@ function startPrintPurchase() {
   `;
 
   createModal(modalContent);
+
+  // Start carousel autoplay
+  startCarouselAutoPlay();
 
   // Show/hide frame color based on product selection
   const productOptions = document.querySelectorAll('input[name="productType"]');
@@ -1786,6 +1810,34 @@ function showPrintInfo() {
 
 // Make showPrintInfo available globally
 window.showPrintInfo = showPrintInfo;
+
+// Carousel functionality
+function showCarouselSlide(index) {
+  const imgs = document.querySelectorAll('.carousel-img');
+  const dots = document.querySelectorAll('.carousel-dot');
+
+  imgs.forEach((img, i) => {
+    img.classList.toggle('active', i === index);
+  });
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('active', i === index);
+  });
+}
+
+function startCarouselAutoPlay() {
+  let currentSlide = 0;
+  const totalSlides = 4;
+
+  // Clear any existing interval
+  if (carouselInterval) clearInterval(carouselInterval);
+
+  carouselInterval = setInterval(() => {
+    currentSlide = (currentSlide + 1) % totalSlides;
+    showCarouselSlide(currentSlide);
+  }, 3000);
+}
+
+window.showCarouselSlide = showCarouselSlide;
 
 // Show sample video in a player
 function showSampleVideo() {
