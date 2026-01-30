@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Generate beautiful feather text graphics from bird colors">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ baseUrl }}">
+    <meta property="og:title" content="FeatherType">
+    <meta property="og:description" content="Generate beautiful feather text graphics from bird colors">
+    <meta property="og:image" content="{{ baseUrl }}/preview.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FeatherType">
+    <meta name="twitter:description" content="Generate beautiful feather text graphics from bird colors">
+    <meta name="twitter:image" content="{{ baseUrl }}/preview.png">
+
+    <title>FeatherType - Bird-Colored Text Art</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪶</text></svg>">
+    <!-- Google Fonts - Playfair Display -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Umami Analytics -->
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="f5811df2-7199-492b-9a0f-118a6d8bc1e2"></script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Playfair Display', Georgia, serif;
+        background-color: rgb(245, 240, 230);
+        color: #333;
+        line-height: 1.6;
+      }
+
+      /* Fixed Background Animation */
+      .background-animation {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .background-animation iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: transparent;
+      }
+
+      /* Hero Section - floats over animation */
+      .hero {
+        position: relative;
+        z-index: 1;
+        min-height: 125vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 40px 20px 80px;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: 1.5rem;
+        font-weight: 400;
+        color: #444;
+        margin-bottom: 30px;
+        max-width: 600px;
+        background: rgba(255, 255, 255, 0.75);
+        padding: 20px 30px;
+        border-radius: 16px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      .cta-button {
+        display: inline-block;
+        background-color: #2563eb;
+        color: white;
+        padding: 18px 40px;
+        font-size: 1.3rem;
+        font-family: 'Playfair Display', Georgia, serif;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        pointer-events: auto;
+      }
+
+      .cta-button:hover {
+        background-color: #1d4ed8;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+      }
+
+      /* Scroll indicator */
+      .scroll-indicator {
+        margin-top: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #666;
+        font-size: 0.95rem;
+        animation: bounce 2s infinite;
+        background: rgba(255, 255, 255, 0.75);
+        padding: 15px 25px;
+        border-radius: 12px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      .scroll-indicator svg {
+        margin-top: 8px;
+        width: 24px;
+        height: 24px;
+        stroke: #666;
+      }
+
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(8px);
+        }
+        60% {
+          transform: translateY(4px);
+        }
+      }
+
+      /* Scrollable content sections */
+      .content-sections {
+        position: relative;
+        z-index: 2;
+        background: var(--bg-color, rgb(245, 240, 230));
+      }
+
+      /* Gallery Section */
+      .gallery-section {
+        padding: 60px 20px;
+        background-color: #fff;
+      }
+
+      .gallery-section h2 {
+        text-align: center;
+        font-size: 2rem;
+        margin-bottom: 40px;
+        color: #333;
+      }
+
+      .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .gallery-item {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        aspect-ratio: 1;
+      }
+
+      .gallery-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      }
+
+      .gallery-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .gallery-item .overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.7));
+        padding: 30px 20px 20px;
+        color: white;
+        text-align: center;
+      }
+
+      .gallery-item .phrase {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .gallery-item .gallery-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 10px;
+      }
+
+      .gallery-item .gallery-btn {
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .gallery-item .make-btn {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.4);
+      }
+
+      .gallery-item .make-btn:hover {
+        background: rgba(255,255,255,0.3);
+      }
+
+      .gallery-item .buy-btn {
+        background: #059669;
+        color: white;
+      }
+
+      .gallery-item .buy-btn:hover {
+        background: #047857;
+      }
+
+      /* About Section */
+      .about-section {
+        padding: 80px 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .about-section h2 {
+        font-size: 2rem;
+        margin-bottom: 25px;
+        text-align: center;
+      }
+
+      .about-section p {
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        color: #555;
+      }
+
+      /* Bio Section */
+      .bio-section {
+        padding: 60px 20px;
+        background-color: #fff;
+      }
+
+      .bio-content {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 30px;
+      }
+
+      .bio-text {
+        flex: 1;
+      }
+
+      .bio-text h3 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+      }
+
+      .bio-text p {
+        color: #555;
+        font-size: 1rem;
+        margin-bottom: 15px;
+      }
+
+      .bio-links a {
+        color: #2563eb;
+        text-decoration: none;
+        margin-right: 15px;
+      }
+
+      .bio-links a:hover {
+        text-decoration: underline;
+      }
+
+      /* Footer */
+      footer {
+        text-align: center;
+        padding: 40px 20px;
+        color: #888;
+        font-size: 0.9rem;
+      }
+
+      footer a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+
+      @media (max-width: 600px) {
+        .hero h1 {
+          font-size: 1.2rem;
+        }
+
+        .cta-button {
+          padding: 15px 30px;
+          font-size: 1.1rem;
+        }
+
+        .bio-content {
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .hero-animation iframe {
+          height: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Fixed Background Animation -->
+    <div class="background-animation">
+      <iframe src="/create?embed=true&phrase=FEATHERTYPE" title="FeatherType Animation"></iframe>
+    </div>
+
+    <!-- Hero Section - floats over animation -->
+    <section class="hero">
+      <h1>Transform any phrase into typographic feather art, colored by descriptions of real birds</h1>
+      <a href="/create" class="cta-button">Make Your Own!</a>
+      <div class="scroll-indicator">
+        <span>See the gallery</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Content that scrolls over the background -->
+    <div class="content-sections">
+      <!-- Gallery Section -->
+      <section class="gallery-section">
+      <h2>Gallery</h2>
+      <div class="gallery-grid" id="gallery-grid">
+        <!-- Gallery items loaded dynamically -->
+      </div>
+    </section>
+
+    <script>
+      // Load gallery from JSON
+      fetch('/gallery/gallery.json')
+        .then(res => res.json())
+        .then(data => {
+          const grid = document.getElementById('gallery-grid');
+          data.items.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'gallery-item';
+            div.innerHTML = `
+              <img src="${item.image}" alt="${item.phrase} in feathers">
+              <div class="overlay">
+                <div class="phrase">${item.phrase}</div>
+                <div class="gallery-buttons">
+                  <a href="/create?gallery=${item.id}" class="gallery-btn make-btn">Make your own</a>
+                  <a href="/create?gallery=${item.id}&print=true" class="gallery-btn buy-btn">Buy Print</a>
+                </div>
+              </div>
+            `;
+            grid.appendChild(div);
+          });
+        })
+        .catch(err => console.error('Error loading gallery:', err));
+
+      // Listen for background color from iframe
+      window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'backgroundColor') {
+          const [r, g, b] = event.data.color;
+          const bgColor = `rgb(${r}, ${g}, ${b})`;
+          document.body.style.backgroundColor = bgColor;
+          document.documentElement.style.setProperty('--bg-color', bgColor);
+        }
+      });
+    </script>
+
+    <!-- About Section -->
+    <section class="about-section">
+      <h2>About FeatherType</h2>
+      <p>
+        FeatherType transforms words into living art using the colors of real birds. Each letter is matched to a bird whose name begins with that letter, and the feather is rendered in that bird's actual plumage colors.
+      </p>
+      <p>
+        Type any word or phrase, and watch as it comes to life with the vibrant hues of warblers, tanagers, finches, and hundreds of other species. Every regeneration brings new birds and new color combinations—no two creations are ever quite the same.
+      </p>
+      <p>
+        Download your designs as high-resolution images or animated videos, perfect for prints, gifts, or sharing your love of birds with the world.
+      </p>
+    </section>
+
+      <!-- Bio Section -->
+      <section class="bio-section">
+        <div class="bio-content">
+          <div class="bio-text">
+            <h3>Created by Jer Thorp</h3>
+            <p>
+              Jer Thorp is a National Geographic Explorer and was the first Data Artist in Residence at The New York Times. His work explores the intersection of art, science, and data, creating experiences that help people connect with information in meaningful ways.
+            </p>
+            <div class="bio-links">
+              <a href="https://www.jerthorp.com" target="_blank">Website</a>
+              <a href="https://www.instagram.com/blprnt" target="_blank">Instagram</a>
+              <a href="https://www.jerthorp.me/news" target="_blank">Newsletter</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer>
+        <p>Made with 🪶 by <a href="https://jerthorp.com">Jer Thorp</a></p>
+      </footer>
+    </div><!-- end content-sections -->
+  </body>
+</html>

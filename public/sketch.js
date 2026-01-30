@@ -110,7 +110,17 @@ const defaultPhrases = [
   "ALWAYS REMEMBER TO LOOK UP.",
   "FLOCK, YEAH!"
 ];
-let displayText = defaultPhrases[Math.floor(Math.random() * defaultPhrases.length)];
+
+// Check URL parameters for phrase, embed mode, gallery, print trigger, and admin
+const urlParams = new URLSearchParams(window.location.search);
+const urlPhrase = urlParams.get('phrase');
+const embedMode = urlParams.get('embed') === 'true';
+const galleryId = urlParams.get('gallery');
+const autoPrint = urlParams.get('print') === 'true';
+const adminMode = urlParams.get('admin') === 'true';
+
+let displayText = urlPhrase ? urlPhrase.toUpperCase() : defaultPhrases[Math.floor(Math.random() * defaultPhrases.length)];
+let gallerySettings = null; // Will be loaded if galleryId is present
 
 // Letter positions and feather assignments
 let letterData = [];
@@ -185,8 +195,23 @@ function setup() {
       setupLetterPositionsFromData(serverLetterData);
       // Set birds as loaded so draw() proceeds
       birds = [];
-      toLoad = 0;
+
+      // Fetch colors for all unique birds in the letter data
+      let uniqueBirdNames = [...new Set(
+        serverLetterData
+          .filter(d => d.birdName && d.birdName.length > 0)
+          .map(d => d.birdName.toLowerCase())
+      )];
+
+      toLoad = uniqueBirdNames.length;
       colorCount = 0;
+
+      if (toLoad > 0) {
+        // Fetch colors for each bird - rendering will happen when all are loaded
+        uniqueBirdNames.forEach(birdName => {
+          getColorsForBird(birdName, false);
+        });
+      }
     } else {
       // Fallback: fetch birds (won't match client)
       getBirdsFromSearch(displayText);
@@ -220,8 +245,17 @@ function setup() {
   select('body').style('margin', '0');
   select('body').style('padding', '0');
   select('body').style('overflow', 'auto');
-  select('body').style('background-color', '#f5f0e6'); // Always beige
+  let bgRgb = `rgb(${red(bcolor)}, ${green(bcolor)}, ${blue(bcolor)})`;
+  select('body').style('background-color', embedMode ? bgRgb : '#f5f0e6');
   select('body').style('font-family', 'system-ui, -apple-system, sans-serif');
+
+  // Send background color to parent window if in embed mode
+  if (embedMode && window.parent !== window) {
+    window.parent.postMessage({
+      type: 'backgroundColor',
+      color: [red(bcolor), green(bcolor), blue(bcolor)]
+    }, '*');
+  }
 
   // Add responsive CSS for bottom buttons
   let responsiveStyle = document.createElement('style');
@@ -246,9 +280,15 @@ function setup() {
   select('canvas').style('display', 'block');
   select('canvas').style('max-width', '100%');
   select('canvas').style('height', 'auto');
-  select('canvas').style('box-shadow', '0 4px 20px rgba(0,0,0,0.1)');
-  select('canvas').style('margin', '120px auto 20px auto'); // Top margin for controls (extra on mobile)
-  select('canvas').style('padding', '0 10px');
+  select('canvas').style('box-shadow', embedMode ? 'none' : '0 4px 20px rgba(0,0,0,0.1)');
+  select('canvas').style('margin', embedMode ? '0 auto' : '120px auto 20px auto');
+  select('canvas').style('padding', embedMode ? '0' : '0 10px');
+
+  // Skip controls and bottom buttons in embed mode
+  if (embedMode) {
+    getBirdsFromSearch(displayText);
+    return;
+  }
 
   // Create container for controls - responsive layout
   let controlsDiv = createDiv('');
@@ -394,6 +434,32 @@ function setup() {
     printButton.style('transform', 'translateY(0)');
   });
 
+  // Admin: Add to Gallery button (only in admin mode)
+  if (adminMode) {
+    let galleryButton = createButton("+ Add to Gallery");
+    galleryButton.parent(controlsDiv);
+    galleryButton.style('padding', '10px 14px');
+    galleryButton.style('border', '2px solid #dc2626');
+    galleryButton.style('border-radius', '8px');
+    galleryButton.style('font-size', '13px');
+    galleryButton.style('background-color', '#dc2626');
+    galleryButton.style('color', '#fff');
+    galleryButton.style('cursor', 'pointer');
+    galleryButton.style('font-weight', '600');
+    galleryButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
+    galleryButton.style('transition', 'all 0.2s');
+    galleryButton.style('white-space', 'nowrap');
+    galleryButton.mousePressed(() => addToGallery());
+    galleryButton.mouseOver(() => {
+      galleryButton.style('background-color', '#b91c1c');
+      galleryButton.style('transform', 'translateY(-1px)');
+    });
+    galleryButton.mouseOut(() => {
+      galleryButton.style('background-color', '#dc2626');
+      galleryButton.style('transform', 'translateY(0)');
+    });
+  }
+
   // Bottom buttons container
   let bottomButtons = createDiv('');
   bottomButtons.id('bottom-buttons');
@@ -474,13 +540,54 @@ function setup() {
     instaButton.style('background-color', 'rgba(255,255,255,0.75)');
   });
 
-  // Use getBirdsFromSearch to load initial bird data based on displayText
-  getBirdsFromSearch(displayText);
+  // Load gallery settings if gallery ID is present, then fetch birds
+  if (galleryId) {
+    loadGallerySettings(galleryId).then(() => {
+      getBirdsFromSearch(displayText);
+      // Auto-trigger print modal after a delay to let everything render
+      if (autoPrint) {
+        setTimeout(() => {
+          startPrintPurchase();
+        }, 2000);
+      }
+    });
+  } else {
+    getBirdsFromSearch(displayText);
+  }
+}
+
+// Load gallery settings from JSON
+async function loadGallerySettings(id) {
+  try {
+    const response = await fetch('/gallery/gallery.json');
+    const data = await response.json();
+    const item = data.items.find(i => i.id === id);
+    if (item && item.settings) {
+      gallerySettings = item.settings;
+      displayText = item.settings.displayText || displayText;
+      if (item.settings.backgroundColor) {
+        let bg = item.settings.backgroundColor;
+        bcolor = color(bg[0], bg[1], bg[2]);
+      }
+      // Update the text input if it exists
+      const textInput = document.querySelector('#controls input');
+      if (textInput) {
+        textInput.value = displayText;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading gallery settings:', error);
+  }
 }
 
 function draw() {
-  // Server mode with pre-built data - render immediately (but not video mode)
+  // Server mode with pre-built data - render only when colors are loaded (but not video mode)
   if (serverMode && !videoMode && serverLetterData && letterData.length > 0) {
+    // Wait for all bird colors to be loaded
+    if (colorCount < toLoad) {
+      background(bcolor);
+      return; // Keep looping until colors are loaded
+    }
     drawFeatherText();
     signalRenderComplete();
     noLoop();
@@ -1131,7 +1238,10 @@ function addColor(_data) {
   if (colorCount == toLoad) {
     console.log("All bird colors loaded.");
     // Force regeneration of letter positions now that we have all color data
-    letterData = [];
+    // But NOT in server mode with pre-built data - we want to keep those positions
+    if (!serverMode || !serverLetterData) {
+      letterData = [];
+    }
     loop();
   }
 }
@@ -2164,6 +2274,61 @@ async function finalizeVideoOrder(paymentIntentId, email) {
 }
 
 // Make functions available globally for onclick handlers
+// Admin: Add current design to gallery
+async function addToGallery() {
+  // Prompt for gallery ID
+  const id = prompt('Enter a gallery ID (lowercase, no spaces, e.g., "hope", "birdbrain"):');
+  if (!id) return;
+
+  // Validate ID format
+  const cleanId = id.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (cleanId !== id) {
+    alert('ID should be lowercase letters and numbers only. Using: ' + cleanId);
+  }
+
+  // Get current settings including letterData
+  const settings = {
+    displayText: displayText,
+    backgroundColor: [red(bcolor), green(bcolor), blue(bcolor)],
+    letterData: letterData.map(l => ({
+      char: l.char,
+      birdName: l.birdName || '',
+      featherAngle: l.featherAngle || 0,
+      randomSeed: l.randomSeed || Math.random()
+    }))
+  };
+
+  // Show loading
+  const btn = event.target;
+  const originalText = btn.innerText;
+  btn.innerText = 'Saving...';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch('/admin/add-to-gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: cleanId,
+        phrase: displayText,
+        settings: settings
+      })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      alert(`Added to gallery!\n\nID: ${cleanId}\nImage: ${data.image}`);
+    } else {
+      throw new Error(data.error || 'Failed to add to gallery');
+    }
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    btn.innerText = originalText;
+    btn.disabled = false;
+  }
+}
+
 window.handleDownload = handleDownload;
 window.handleAddressSubmit = handleAddressSubmit;
 window.handlePrintPayment = handlePrintPayment;

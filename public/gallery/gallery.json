@@ -1,0 +1,424 @@
+{
+  "items": [
+    {
+      "id": "song",
+      "phrase": "BECAUSE IT HAS A SONG.",
+      "image": "/gallery/song.jpg",
+      "settings": {
+        "displayText": "BECAUSE IT HAS A SONG.",
+        "backgroundColor": [
+          230,
+          235,
+          240
+        ],
+        "letterData": [
+          {
+            "char": "B",
+            "birdName": "black-fronted fig-parrot",
+            "featherAngle": 0.053541093552485125,
+            "randomSeed": 0.5838969386569073
+          },
+          {
+            "char": "E",
+            "birdName": "eastern striolated-puffbird",
+            "featherAngle": 0.07633240739814937,
+            "randomSeed": 0.37763729873317964
+          },
+          {
+            "char": "C",
+            "birdName": "cameroon indigobird",
+            "featherAngle": 0.08775024977512658,
+            "randomSeed": 0.018926885746745725
+          },
+          {
+            "char": "A",
+            "birdName": "ashy-throated chlorospingus",
+            "featherAngle": -0.025714241573587066,
+            "randomSeed": 0.4883244120127058
+          },
+          {
+            "char": "U",
+            "birdName": "ua pou monarch",
+            "featherAngle": -0.04840766503475607,
+            "randomSeed": 0.45222306454397554
+          },
+          {
+            "char": "S",
+            "birdName": "sclater's whistler",
+            "featherAngle": 0.06838464695028962,
+            "randomSeed": 0.8258674008715491
+          },
+          {
+            "char": "E",
+            "birdName": "eurasian jackdaw",
+            "featherAngle": -0.005333146406337613,
+            "randomSeed": 0.6071983926186347
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.09169158544391395,
+            "randomSeed": 0.4751167955770885
+          },
+          {
+            "char": "I",
+            "birdName": "indian blue robin",
+            "featherAngle": -0.05191877195611597,
+            "randomSeed": 0.7399583010739141
+          },
+          {
+            "char": "T",
+            "birdName": "temminck's babbler",
+            "featherAngle": -0.01919298619031906,
+            "randomSeed": 0.5519857078347613
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.04187515373341738,
+            "randomSeed": 0.6388985977715487
+          },
+          {
+            "char": "H",
+            "birdName": "himalayan monal",
+            "featherAngle": -0.05752955633215606,
+            "randomSeed": 0.3602783987377822
+          },
+          {
+            "char": "A",
+            "birdName": "african cuckoo",
+            "featherAngle": -0.03338553742505611,
+            "randomSeed": 0.025791098395996803
+          },
+          {
+            "char": "S",
+            "birdName": "small-billed elaenia",
+            "featherAngle": 0.08976781726814806,
+            "randomSeed": 0.8318820932900349
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.02325185872614384,
+            "randomSeed": 0.752691200636917
+          },
+          {
+            "char": "A",
+            "birdName": "asian openbill",
+            "featherAngle": 0.0003589120693504866,
+            "randomSeed": 0.9809495743126863
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.06532583017833532,
+            "randomSeed": 0.2537218362466326
+          },
+          {
+            "char": "S",
+            "birdName": "see-see partridge",
+            "featherAngle": 0.04716756544075906,
+            "randomSeed": 0.4531943184040713
+          },
+          {
+            "char": "O",
+            "birdName": "olive ibis",
+            "featherAngle": 0.010038084769621494,
+            "randomSeed": 0.8484115314094394
+          },
+          {
+            "char": "N",
+            "birdName": "northern slaty-antshrike",
+            "featherAngle": -0.021820180909708137,
+            "randomSeed": 0.4217560323078102
+          },
+          {
+            "char": "G",
+            "birdName": "greater yellowlegs",
+            "featherAngle": 0.01567174908705056,
+            "randomSeed": 0.22705676067466285
+          },
+          {
+            "char": ".",
+            "birdName": "",
+            "featherAngle": 0.06536271739751101,
+            "randomSeed": 0.35733932928722845
+          }
+        ]
+      }
+    },
+    {
+      "id": "ilya",
+      "phrase": "ILYA + SHANE",
+      "image": "/gallery/ilya.jpg",
+      "settings": {
+        "displayText": "ILYA + SHANE",
+        "backgroundColor": [
+          230,
+          235,
+          240
+        ],
+        "letterData": [
+          {
+            "char": "I",
+            "birdName": "indian peafowl",
+            "featherAngle": 0.021574663696810603,
+            "randomSeed": 0.9255234252392049
+          },
+          {
+            "char": "L",
+            "birdName": "lark bunting",
+            "featherAngle": 0.02755409781821072,
+            "randomSeed": 0.4460096495914433
+          },
+          {
+            "char": "Y",
+            "birdName": "yellow-collared macaw",
+            "featherAngle": 0.01429487592540682,
+            "randomSeed": 0.2203429085965517
+          },
+          {
+            "char": "A",
+            "birdName": "ashy drongo",
+            "featherAngle": 0.05298571609891953,
+            "randomSeed": 0.6527436519380515
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.09630314856767655,
+            "randomSeed": 0.20809564306528938
+          },
+          {
+            "char": "+",
+            "birdName": "",
+            "featherAngle": 0.04558320636861027,
+            "randomSeed": 0.14567033416902675
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.033794305566698324,
+            "randomSeed": 0.8644866558205309
+          },
+          {
+            "char": "S",
+            "birdName": "spot-winged falconet",
+            "featherAngle": -0.09398809876292945,
+            "randomSeed": 0.5958256844824383
+          },
+          {
+            "char": "H",
+            "birdName": "halmahera boobook",
+            "featherAngle": -0.05287190498784185,
+            "randomSeed": 0.8765126637986859
+          },
+          {
+            "char": "A",
+            "birdName": "albert's lyrebird",
+            "featherAngle": 0.026811805739998806,
+            "randomSeed": 0.2221133480758356
+          },
+          {
+            "char": "N",
+            "birdName": "northern yellow white-eye",
+            "featherAngle": -0.09163797227665782,
+            "randomSeed": 0.8175386817543302
+          },
+          {
+            "char": "E",
+            "birdName": "elusive antpitta",
+            "featherAngle": 0.029097616486251365,
+            "randomSeed": 0.7283624269902222
+          }
+        ]
+      }
+    },
+    {
+      "id": "always",
+      "phrase": "ALWAYS BE BIRDING.",
+      "image": "/gallery/always.jpg",
+      "settings": {
+        "displayText": "ALWAYS BE BIRDING.",
+        "backgroundColor": [
+          238,
+          238,
+          238
+        ],
+        "letterData": [
+          {
+            "char": "A",
+            "birdName": "ashy-throated chlorospingus",
+            "featherAngle": -0.06113618691451848,
+            "randomSeed": 0.6900173190755894
+          },
+          {
+            "char": "L",
+            "birdName": "lesser elaenia",
+            "featherAngle": -0.045400441018864514,
+            "randomSeed": 0.9030409326979733
+          },
+          {
+            "char": "W",
+            "birdName": "white-browed antpitta",
+            "featherAngle": 0.04112443416379391,
+            "randomSeed": 0.2606346402028472
+          },
+          {
+            "char": "A",
+            "birdName": "african paradise-flycatcher",
+            "featherAngle": -0.0588054986204952,
+            "randomSeed": 0.6546823735737987
+          },
+          {
+            "char": "Y",
+            "birdName": "yellow-winged tanager",
+            "featherAngle": -0.09425084036774933,
+            "randomSeed": 0.9906133228066036
+          },
+          {
+            "char": "S",
+            "birdName": "spotted scrubwren",
+            "featherAngle": -0.022352817608043557,
+            "randomSeed": 0.64828797429351
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.023484565876424307,
+            "randomSeed": 0.8652433542973892
+          },
+          {
+            "char": "B",
+            "birdName": "brown-headed apalis",
+            "featherAngle": 0.05624506762251258,
+            "randomSeed": 0.1275224568767026
+          },
+          {
+            "char": "E",
+            "birdName": "ecuadorian cacique",
+            "featherAngle": 0.057120658457279205,
+            "randomSeed": 0.4115693674976162
+          },
+          {
+            "char": " ",
+            "birdName": "",
+            "featherAngle": 0.01123219723813236,
+            "randomSeed": 0.7227147148014131
+          },
+          {
+            "char": "B",
+            "birdName": "brown-capped redstart",
+            "featherAngle": 0.020274419011548167,
+            "randomSeed": 0.7137183653849084
+          },
+          {
+            "char": "I",
+            "birdName": "indian cormorant",
+            "featherAngle": 0.0890885905828327,
+            "randomSeed": 0.9053551042829158
+          },
+          {
+            "char": "R",
+            "birdName": "red-bellied woodpecker",
+            "featherAngle": 0.007933292398229236,
+            "randomSeed": 0.34645016858448885
+          },
+          {
+            "char": "D",
+            "birdName": "drab whistler",
+            "featherAngle": 0.03497028979472816,
+            "randomSeed": 0.7810373720663649
+          },
+          {
+            "char": "I",
+            "birdName": "inaccessible island rail",
+            "featherAngle": -0.06518985847942532,
+            "randomSeed": 0.6221992596845235
+          },
+          {
+            "char": "N",
+            "birdName": "nankeen night heron",
+            "featherAngle": -0.08110808529891074,
+            "randomSeed": 0.3009020741113754
+          },
+          {
+            "char": "G",
+            "birdName": "gray fantail",
+            "featherAngle": -0.007298110937699678,
+            "randomSeed": 0.6935406198095154
+          },
+          {
+            "char": ".",
+            "birdName": "",
+            "featherAngle": -0.0408949799835682,
+            "randomSeed": 0.28526212113002314
+          }
+        ]
+      }
+    },
+    {
+      "id": "nestling",
+      "phrase": "NESTLING",
+      "image": "/gallery/nestling.jpg",
+      "settings": {
+        "displayText": "NESTLING",
+        "backgroundColor": [
+          235,
+          240,
+          240
+        ],
+        "letterData": [
+          {
+            "char": "N",
+            "birdName": "northern cassowary",
+            "featherAngle": -0.09856967078521849,
+            "randomSeed": 0.014380779609358019
+          },
+          {
+            "char": "E",
+            "birdName": "eared quetzal",
+            "featherAngle": 0.08596870116889477,
+            "randomSeed": 0.8471885886191969
+          },
+          {
+            "char": "S",
+            "birdName": "slender-billed oriole",
+            "featherAngle": 0.009312871564179662,
+            "randomSeed": 0.5155438999203629
+          },
+          {
+            "char": "T",
+            "birdName": "turati's boubou",
+            "featherAngle": 0.08367373999208214,
+            "randomSeed": 0.44506528654674116
+          },
+          {
+            "char": "L",
+            "birdName": "large-billed lark",
+            "featherAngle": 0.06067551514133812,
+            "randomSeed": 0.8802807538795592
+          },
+          {
+            "char": "I",
+            "birdName": "island leaf warbler",
+            "featherAngle": -0.009952497482299802,
+            "randomSeed": 0.515681049150341
+          },
+          {
+            "char": "N",
+            "birdName": "nanday parakeet",
+            "featherAngle": -0.0524793959222734,
+            "randomSeed": 0.6626636949903716
+          },
+          {
+            "char": "G",
+            "birdName": "great horned owl",
+            "featherAngle": 0.0676951313391328,
+            "randomSeed": 0.02755834329159146
+          }
+        ]
+      }
+    }
+  ]
+}

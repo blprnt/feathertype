@@ -328,7 +328,15 @@ nunjucks.configure("public", {
 });
 
 // Main route
+// Landing page
 app.get(`/`, (req, res) => {
+  res.render(`landing.njk`, {
+    baseUrl: BASE_URL,
+  });
+});
+
+// Main app (create page)
+app.get(`/create`, (req, res) => {
   res.render(`index.njk`, {
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     baseUrl: BASE_URL,
@@ -573,6 +581,132 @@ app.post("/get-quote", async (req, res) => {
   }
 });
 
+// Admin: Add design to gallery
+app.post("/admin/add-to-gallery", async (req, res) => {
+  try {
+    const { id, phrase, settings } = req.body;
+
+    if (!id || !phrase || !settings) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Validate ID format
+    const cleanId = id.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // Read existing gallery
+    const galleryPath = path.join(__dirname, 'public', 'gallery', 'gallery.json');
+    let galleryData = { items: [] };
+    if (fs.existsSync(galleryPath)) {
+      galleryData = JSON.parse(fs.readFileSync(galleryPath, 'utf-8'));
+    }
+
+    // Check if ID already exists
+    const existingIndex = galleryData.items.findIndex(item => item.id === cleanId);
+
+    // Render the gallery image (800px for web)
+    const imageFilename = `${cleanId}.jpg`;
+    const imagePath = path.join(__dirname, 'public', 'gallery', imageFilename);
+
+    // Use Puppeteer to render
+    await renderGalleryImage(settings, imagePath);
+
+    // Create gallery item
+    const galleryItem = {
+      id: cleanId,
+      phrase: phrase,
+      image: `/gallery/${imageFilename}`,
+      settings: settings
+    };
+
+    // Add or update in gallery
+    if (existingIndex >= 0) {
+      galleryData.items[existingIndex] = galleryItem;
+    } else {
+      galleryData.items.push(galleryItem);
+    }
+
+    // Save gallery.json
+    fs.writeFileSync(galleryPath, JSON.stringify(galleryData, null, 2));
+
+    console.log(`Gallery item added/updated: ${cleanId}`);
+
+    res.json({
+      success: true,
+      id: cleanId,
+      image: `/gallery/${imageFilename}`
+    });
+  } catch (error) {
+    console.error("Error adding to gallery:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Render gallery image (800px JPEG for web)
+async function renderGalleryImage(settings, outputPath) {
+  const possiblePaths = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+  ];
+
+  let executablePath = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      executablePath = p;
+      break;
+    }
+  }
+
+  const browser = await puppeteer.launch({
+    headless: "new",
+    executablePath: executablePath,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+  });
+
+  try {
+    const page = await browser.newPage();
+
+    await page.setViewport({
+      width: 1200,
+      height: 1200,
+      deviceScaleFactor: 1,
+    });
+
+    // Inject server parameters
+    await page.evaluateOnNewDocument((params) => {
+      window.SERVER_PARAMS = params;
+    }, {
+      settings: settings,
+      width: 800,
+      height: 800,
+      serverMode: true,
+    });
+
+    await page.goto(`${LOCAL_URL}/create`, { waitUntil: "networkidle0" });
+
+    // Wait for render completion
+    await page.waitForSelector("#render-complete", { timeout: 60000 });
+
+    // Get canvas as JPEG
+    const dataUrl = await page.evaluate(() => {
+      const canvas = document.querySelector("canvas");
+      return canvas ? canvas.toDataURL("image/jpeg", 0.9) : null;
+    });
+
+    if (!dataUrl) {
+      throw new Error("Canvas not found");
+    }
+
+    // Save as JPEG
+    const base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+    fs.writeFileSync(outputPath, Buffer.from(base64Data, "base64"));
+
+    console.log(`Gallery image rendered: ${outputPath}`);
+  } finally {
+    await browser.close();
+  }
+}
+
 // Finalize print order - render image and submit to Prodigi
 app.post("/finalize-order", async (req, res) => {
   try {
@@ -672,7 +806,7 @@ async function renderImage(settings, width, height, outputPath) {
     });
 
     // Navigate to the page (use local URL for rendering)
-    await page.goto(LOCAL_URL, { waitUntil: "networkidle0" });
+    await page.goto(`${LOCAL_URL}/create`, { waitUntil: "networkidle0" });
 
     // Wait for render completion signal
     await page.waitForSelector("#render-complete", { timeout: 60000 });
@@ -756,7 +890,7 @@ async function renderVideo(settings, outputPath, videoId) {
       fps: fps,
     });
 
-    await page.goto(LOCAL_URL, { waitUntil: "networkidle0" });
+    await page.goto(`${LOCAL_URL}/create`, { waitUntil: "networkidle0" });
 
     // Wait for video mode to be ready
     await page.waitForSelector("#video-ready", { timeout: 60000 });
