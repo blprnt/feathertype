@@ -302,8 +302,18 @@
       }
 
       @media (max-width: 600px) {
+        .hero {
+          min-height: 100vh;
+          padding-bottom: 40px;
+        }
+
         .hero h1 {
           font-size: 1.2rem;
+        }
+
+        .hero-buttons {
+          flex-direction: column;
+          gap: 15px;
         }
 
         .cta-button {
