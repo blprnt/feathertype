@@ -346,8 +346,8 @@ function setup() {
   spacer.style('flex', '1 1 auto');
   spacer.style('min-width', '10px');
 
-  // Download High-Res button (free)
-  let downloadButton = createButton("Get 🖼️");
+  // Download button (image/video/both)
+  let downloadButton = createButton("Download");
   downloadButton.parent(controlsDiv);
   downloadButton.style('padding', '10px 14px');
   downloadButton.style('border', '2px solid #2563eb');
@@ -360,7 +360,7 @@ function setup() {
   downloadButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
   downloadButton.style('transition', 'all 0.2s');
   downloadButton.style('white-space', 'nowrap');
-  downloadButton.mousePressed(() => startDigitalDownload());
+  downloadButton.mousePressed(() => startDownload());
   downloadButton.mouseOver(() => {
     downloadButton.style('background-color', '#1d4ed8');
     downloadButton.style('transform', 'translateY(-1px)');
@@ -368,30 +368,6 @@ function setup() {
   downloadButton.mouseOut(() => {
     downloadButton.style('background-color', '#2563eb');
     downloadButton.style('transform', 'translateY(0)');
-  });
-
-  // Download Video button (5)
-  let videoButton = createButton("Get 🎬 $5");
-  videoButton.parent(controlsDiv);
-  videoButton.style('padding', '10px 14px');
-  videoButton.style('border', '2px solid #7c3aed');
-  videoButton.style('border-radius', '8px');
-  videoButton.style('font-size', '13px');
-  videoButton.style('background-color', '#7c3aed');
-  videoButton.style('color', '#fff');
-  videoButton.style('cursor', 'pointer');
-  videoButton.style('font-weight', '600');
-  videoButton.style('box-shadow', '0 2px 4px rgba(0,0,0,0.2)');
-  videoButton.style('transition', 'all 0.2s');
-  videoButton.style('white-space', 'nowrap');
-  videoButton.mousePressed(() => startVideoPurchase());
-  videoButton.mouseOver(() => {
-    videoButton.style('background-color', '#6d28d9');
-    videoButton.style('transform', 'translateY(-1px)');
-  });
-  videoButton.mouseOut(() => {
-    videoButton.style('background-color', '#7c3aed');
-    videoButton.style('transform', 'translateY(0)');
   });
 
   // Order Print button ($25+)
@@ -1345,12 +1321,32 @@ function setModalProcessing(processing) {
   }
 }
 
-// Start digital download (free with optional tip)
-function startDigitalDownload() {
+// Start download (choose image, video, or both)
+function startDownload() {
   const modalContent = `
-    <h2>Download High-Resolution Image</h2>
-    <p style="margin-bottom: 8px;"><strong>4800 x 4800 pixels</strong> (16" x 16" at 300 DPI)</p>
-    <p>Your high-res image is free! If you'd like to support this project, consider sending a tip.</p>
+    <h2>Download Your Design</h2>
+    <p style="margin-bottom: 15px;">Choose what you'd like to download:</p>
+    <div class="download-options">
+      <label class="download-option">
+        <input type="checkbox" name="downloadType" value="image" checked>
+        <span class="option-content">
+          <span class="option-name">🖼️ High-Res Image</span>
+          <span class="option-desc">4800x4800px PNG</span>
+        </span>
+      </label>
+      <label class="download-option">
+        <input type="checkbox" name="downloadType" value="video">
+        <span class="option-content">
+          <span class="option-name">🎬 Animated Video</span>
+          <span class="option-desc">1080x1080px MP4</span>
+        </span>
+      </label>
+    </div>
+    <div class="form-group" style="margin-top: 15px;">
+      <label for="download-email">Email (optional - to receive download links)</label>
+      <input type="email" id="download-email" placeholder="your@email.com">
+    </div>
+    <p style="font-size: 13px; color: #666; margin: 15px 0;">Downloads are free! If you'd like to support this project, consider sending a tip.</p>
     <div class="venmo-tip-box">
       <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=3&note=FeatherType" target="_blank" class="venmo-link">
         <img src="https://cdn.worldvectorlogo.com/logos/venmo.svg" alt="Venmo" class="venmo-logo">
@@ -1358,8 +1354,8 @@ function startDigitalDownload() {
       </a>
       <p class="venmo-note">Suggested tip: $3</p>
     </div>
-    <button onclick="handleDigitalDownload()" id="download-button" class="submit-button">
-      <span id="download-button-text">Get 🖼️</span>
+    <button onclick="handleDownload()" id="download-button" class="submit-button">
+      <span id="download-button-text">Download</span>
       <span id="download-spinner" class="spinner hidden"></span>
     </button>
   `;
@@ -1367,8 +1363,17 @@ function startDigitalDownload() {
   createModal(modalContent);
 }
 
-// Handle digital download
-async function handleDigitalDownload() {
+// Handle combined download
+async function handleDownload() {
+  const checkboxes = document.querySelectorAll('input[name="downloadType"]:checked');
+  const downloadTypes = Array.from(checkboxes).map(cb => cb.value);
+  const email = document.getElementById('download-email').value.trim();
+
+  if (downloadTypes.length === 0) {
+    alert('Please select at least one download type');
+    return;
+  }
+
   const button = document.getElementById('download-button');
   const buttonText = document.getElementById('download-button-text');
   const spinner = document.getElementById('download-spinner');
@@ -1377,29 +1382,67 @@ async function handleDigitalDownload() {
   buttonText.classList.add('hidden');
   spinner.classList.remove('hidden');
 
+  const wantsImage = downloadTypes.includes('image');
+  const wantsVideo = downloadTypes.includes('video');
+
+  // Update button text based on selection
+  if (wantsVideo) {
+    setModalProcessing(true);
+    const modalContent = document.querySelector('.modal-content');
+    modalContent.innerHTML = `
+      <h2>Preparing Your Download${wantsImage && wantsVideo ? 's' : ''}...</h2>
+      <p>${wantsVideo ? 'Video rendering may take a minute. Please wait.' : 'Generating your image...'}</p>
+      <div style="display: flex; justify-content: center; margin: 30px 0;">
+        <span class="spinner" style="width: 40px; height: 40px; border-width: 3px;"></span>
+      </div>
+    `;
+  }
+
   try {
-    const response = await fetch('/render-digital', {
+    const response = await fetch('/render-downloads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         settings: getCurrentSettings(),
+        wantsImage,
+        wantsVideo,
+        email,
       }),
     });
 
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
 
-    // Track image download
+    // Track downloads
     if (typeof umami !== 'undefined') {
-      umami.track('image-download', { text: displayText });
+      if (wantsImage) umami.track('image-download', { text: displayText });
+      if (wantsVideo) umami.track('video-download', { text: displayText });
     }
 
-    // Show success message with download link
+    setModalProcessing(false);
+
+    // Show success message with download links
     const modalContent = document.querySelector('.modal-content');
+    let downloadLinks = '';
+    if (data.imageUrl) {
+      downloadLinks += `<a href="${data.imageUrl}" download class="download-link" style="margin-right: 10px;">Download Image</a>`;
+    }
+    if (data.videoUrl) {
+      downloadLinks += `<a href="${data.videoUrl}" download class="download-link" style="background-color: #7c3aed;">Download Video</a>`;
+    }
+
     modalContent.innerHTML = `
-      <h2>Your Image is Ready!</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <h2>Your Download${wantsImage && wantsVideo ? 's Are' : ' is'} Ready!</h2>
       <p>Thanks for using FeatherType!</p>
-      <a href="${data.downloadUrl}" download class="download-link">Download Image</a>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">
+        ${downloadLinks}
+      </div>
+      ${data.videoUrl ? `
+      <video controls autoplay loop muted playsinline style="width: 100%; max-width: 300px; border-radius: 8px; margin: 15px auto; display: block;">
+        <source src="${data.videoUrl}" type="video/mp4">
+      </video>
+      ` : ''}
       <div class="venmo-tip-box" style="margin-top: 20px;">
         <p style="margin: 0 0 8px 0; font-size: 14px;">Enjoying FeatherType? Suggested tip: $3</p>
         <a href="https://venmo.com/u/Jer-Thorp?txn=pay&amount=3&note=FeatherType" target="_blank" class="venmo-link">
@@ -1410,7 +1453,8 @@ async function handleDigitalDownload() {
       <button onclick="closeModal()" class="submit-button" style="margin-top: 20px;">Close</button>
     `;
   } catch (error) {
-    alert('Error generating image: ' + error.message);
+    setModalProcessing(false);
+    alert('Error generating download: ' + error.message);
     button.disabled = false;
     buttonText.classList.remove('hidden');
     spinner.classList.add('hidden');
@@ -2120,9 +2164,8 @@ async function finalizeVideoOrder(paymentIntentId, email) {
 }
 
 // Make functions available globally for onclick handlers
-window.handleDigitalDownload = handleDigitalDownload;
+window.handleDownload = handleDownload;
 window.handleAddressSubmit = handleAddressSubmit;
 window.handlePrintPayment = handlePrintPayment;
-window.handleVideoSubmit = handleVideoSubmit;
 window.closeModal = closeModal;
 window.showInfoModal = showInfoModal;

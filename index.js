@@ -252,6 +252,69 @@ async function sendPrintOrderEmail(email, orderId, displayText, productName) {
   }
 }
 
+// Combined download email (image and/or video)
+async function sendDownloadEmail(email, imageUrl, videoUrl, displayText) {
+  try {
+    const hasImage = !!imageUrl;
+    const hasVideo = !!videoUrl;
+    const hasBoth = hasImage && hasVideo;
+
+    let downloadButtons = '';
+    if (hasImage) {
+      downloadButtons += `
+        <a href="${imageUrl}"
+           style="display: inline-block; background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 5px;">
+          Download Image
+        </a>
+      `;
+    }
+    if (hasVideo) {
+      downloadButtons += `
+        <a href="${videoUrl}"
+           style="display: inline-block; background-color: #7c3aed; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 5px;">
+          Download Video
+        </a>
+      `;
+    }
+
+    await resend.emails.send({
+      from: "FeatherType <noreply@feathertype.binstobins.com>",
+      to: email,
+      subject: `Your FeatherType Download${hasBoth ? 's Are' : ' is'} Ready!`,
+      html: `
+        <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #333; font-size: 24px;">Your Download${hasBoth ? 's Are' : ' is'} Ready!</h1>
+          <p style="color: #555; font-size: 16px; line-height: 1.6;">
+            Thank you for using FeatherType! Your ${hasBoth ? 'image and video' : hasImage ? 'image' : 'video'} for "<strong>${displayText}</strong>" ${hasBoth ? 'are' : 'is'} ready to download.
+          </p>
+          <div style="margin: 30px 0; text-align: center;">
+            ${downloadButtons}
+          </div>
+          <p style="color: #888; font-size: 14px;">
+            These download links will remain available for 30 days. If you have any questions, please reply to this email.
+          </p>
+          <div style="background-color: #f9f5ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="color: #555; font-size: 14px; margin: 0 0 10px 0;">
+              Want more creative projects like FeatherType?
+            </p>
+            <a href="https://www.jerthorp.me/news"
+               style="color: #7c3aed; font-weight: 600; text-decoration: none;">
+              Subscribe to Jer's newsletter →
+            </a>
+          </div>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #aaa; font-size: 12px; text-align: center;">
+            Made with 🪶 by <a href="https://jerthorp.com" style="color: #7c3aed;">Jer Thorp</a>
+          </p>
+        </div>
+      `,
+    });
+    console.log(`Download email sent to ${email}`);
+  } catch (error) {
+    console.error("Error sending download email:", error);
+  }
+}
+
 // Create Express app
 const app = express();
 app.use(express.json());
@@ -303,7 +366,7 @@ app.post("/check-discount", (req, res) => {
   }
 });
 
-// Render high-res digital download (free)
+// Render high-res digital download (free) - legacy endpoint
 app.post("/render-digital", async (req, res) => {
   try {
     const settings = sanitizeSettings(req.body.settings);
@@ -321,6 +384,54 @@ app.post("/render-digital", async (req, res) => {
     });
   } catch (error) {
     console.error("Error rendering digital image:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Combined download endpoint (image and/or video)
+app.post("/render-downloads", async (req, res) => {
+  try {
+    const { wantsImage, wantsVideo, email } = req.body;
+    const settings = sanitizeSettings(req.body.settings);
+
+    let imageUrl = null;
+    let videoUrl = null;
+
+    // Generate unique ID for this download session
+    const downloadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Render image if requested
+    if (wantsImage) {
+      const imageFilename = `feathertype-${downloadId}.png`;
+      const imagePath = path.join(printsDir, imageFilename);
+      await renderImage(settings, products.digital.width, products.digital.height, imagePath);
+      imageUrl = `/prints/${imageFilename}`;
+    }
+
+    // Render video if requested
+    if (wantsVideo) {
+      const videoPath = path.join(printsDir, `feathertype-${downloadId}.mp4`);
+      await renderVideo(settings, videoPath, downloadId);
+      videoUrl = `/prints/feathertype-${downloadId}.mp4`;
+    }
+
+    // Send email if provided
+    if (email && (imageUrl || videoUrl)) {
+      await sendDownloadEmail(
+        email,
+        imageUrl ? `${BASE_URL}${imageUrl}` : null,
+        videoUrl ? `${BASE_URL}${videoUrl}` : null,
+        settings.displayText || "your design"
+      );
+    }
+
+    res.json({
+      success: true,
+      imageUrl,
+      videoUrl,
+    });
+  } catch (error) {
+    console.error("Error rendering downloads:", error);
     res.status(500).json({ error: error.message });
   }
 });
